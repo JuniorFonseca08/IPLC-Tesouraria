@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<style>
+  @page { size: A4; margin: 2cm; }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #1a2e25;
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Header */
+  .header {
+    background: #1a4731;
+    color: white;
+    padding: 20pt 24pt;
+    margin-bottom: 18pt;
+    border-radius: 6pt;
+  }
+  .header h1 { margin: 0 0 4pt; font-size: 16pt; color: white; }
+  .header p  { margin: 0; font-size: 9pt; color: rgba(255,255,255,.75); }
+  .header .cross { font-size: 22pt; color: #c9a84c; float: right; line-height: 1; }
+
+  /* Summary row */
+  .summary-row { display: flex; gap: 10pt; margin-bottom: 18pt; }
+  .card {
+    flex: 1;
+    border: 1.5pt solid #d6f0e2;
+    border-left: 4pt solid #2d8a57;
+    border-radius: 5pt;
+    padding: 10pt 12pt;
+  }
+  .card.expense { border-left-color: #c0392b; }
+  .card.balance { border-left-color: #c9a84c; }
+  .card .label { font-size: 7pt; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; margin-bottom: 3pt; }
+  .card .value { font-size: 13pt; font-weight: 700; color: #1a4731; }
+  .card .value.pos { color: #2d8a57; }
+  .card .value.neg { color: #c0392b; }
+  .card .value.gold { color: #c9a84c; }
+
+  /* Tables */
+  .section-title {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #6c757d;
+    margin: 14pt 0 6pt;
+    padding-bottom: 4pt;
+    border-bottom: 1.5pt solid #d6f0e2;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14pt;
+    font-size: 9pt;
+  }
+  thead th {
+    background: #f0faf5;
+    color: #1a4731;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 6pt 8pt;
+    border-bottom: 1.5pt solid #d6f0e2;
+  }
+  tbody td {
+    padding: 5pt 8pt;
+    border-bottom: .5pt solid #e9ecef;
+  }
+  tfoot td {
+    font-weight: 700;
+    background: #d6f0e2;
+    color: #1a4731;
+    padding: 6pt 8pt;
+  }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+
+  /* Result box */
+  .result-box {
+    background: #1a4731;
+    color: white;
+    padding: 16pt 20pt;
+    border-radius: 6pt;
+    margin-top: 18pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .result-box h3 { color: white; margin: 0 0 4pt; font-size: 12pt; }
+  .result-box p  { color: rgba(255,255,255,.65); margin: 0; font-size: 8pt; }
+  .result-box .big { font-size: 26pt; font-weight: 700; }
+  .result-box .big.pos { color: #7fff9e; }
+  .result-box .big.neg { color: #ff8888; }
+  .result-box .right-col { text-align: right; }
+  .result-box .sublabel { font-size: 8pt; color: rgba(255,255,255,.55); margin-top: 3pt; }
+
+  /* Section headers */
+  .section-header {
+    color: white;
+    padding: 8pt 10pt;
+    font-size: 9pt;
+    font-weight: 700;
+    border-radius: 4pt 4pt 0 0;
+  }
+  .sec-income  { background: #1a4731; }
+  .sec-fixas   { background: #8b2317; }
+  .sec-var     { background: #7d5a00; }
+
+  /* Layout helpers */
+  .two-col { display: flex; gap: 14pt; }
+  .two-col > div { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="cross">✝</span>
+  <h1>Relatório Financeiro Mensal</h1>
+  <p>Igreja Presbiteriana em Loteamento Conceição · Rua Araxá, 18<br>
+     <strong>{{ mes_nome }} {{ year }}</strong> &nbsp;·&nbsp; Gerado em {{ now.strftime('%d/%m/%Y') }}</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-row">
+  <div class="card">
+    <div class="label">Total Dízimos</div>
+    <div class="value pos">{{ total_dizimos | brl }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Total Ofertas</div>
+    <div class="value pos">{{ total_ofertas | brl }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Total Entradas</div>
+    <div class="value pos">{{ total_entradas | brl }}</div>
+  </div>
+  <div class="card expense">
+    <div class="label">Total Saídas</div>
+    <div class="value neg">{{ total_saidas | brl }}</div>
+  </div>
+  <div class="card balance">
+    <div class="label">Saldo do Mês</div>
+    <div class="value {{ 'pos' if saldo_mes >= 0 else 'neg' }}">{{ saldo_mes | brl }}</div>
+  </div>
+</div>
+
+<!-- Entradas -->
+<div class="section-title">Entradas por Domingo</div>
+<div class="section-header sec-income">ENTRADAS – DÍZIMOS E OFERTAS</div>
+<table>
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th class="text-right">Dízimos</th>
+      <th class="text-right">Ofertas</th>
+      <th class="text-right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entradas %}
+    <tr>
+      <td>{{ e.data }}</td>
+      <td class="text-right">{{ e.dizimos | brl }}</td>
+      <td class="text-right">{{ e.ofertas | brl }}</td>
+      <td class="text-right"><strong>{{ (e.dizimos + e.ofertas) | brl }}</strong></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center">Nenhuma entrada registrada.</td></tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>TOTAL ENTRADAS</td>
+      <td class="text-right">{{ total_dizimos | brl }}</td>
+      <td class="text-right">{{ total_ofertas | brl }}</td>
+      <td class="text-right">{{ total_entradas | brl }}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- Despesas (two columns) -->
+<div class="two-col">
+  <div>
+    <div class="section-header sec-fixas">DESPESAS FIXAS</div>
+    <table>
+      <thead><tr><th>Descrição</th><th class="text-right">Valor</th></tr></thead>
+      <tbody>
+        {% for d in desp_fixas %}
+        <tr><td>{{ d.descricao }}</td><td class="text-right">{{ d.valor | brl }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-center">Nenhuma despesa fixa.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td>TOTAL FIXAS</td><td class="text-right">{{ total_fixas | brl }}</td></tr></tfoot>
+    </table>
+  </div>
+  <div>
+    <div class="section-header sec-var">DESPESAS VARIÁVEIS</div>
+    <table>
+      <thead><tr><th>Data</th><th>Descrição</th><th class="text-right">Valor</th></tr></thead>
+      <tbody>
+        {% for d in desp_variaveis %}
+        <tr><td>{{ d.data }}</td><td>{{ d.descricao }}</td><td class="text-right">{{ d.valor | brl }}</td></tr>
+        {% else %}
+        <tr><td colspan="3" class="text-center">Nenhuma despesa variável.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="2">TOTAL VARIÁVEIS</td><td class="text-right">{{ total_variaveis | brl }}</td></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Result Box -->
+<div class="result-box">
+  <div>
+    <h3>Resultado – {{ mes_nome }} {{ year }}</h3>
+    <p>Entradas: {{ total_entradas | brl }} &nbsp;|&nbsp; Saídas: {{ total_saidas | brl }}</p>
+  </div>
+  <div class="right-col">
+    <div style="font-size:8pt;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;">SALDO DO MÊS</div>
+    <div class="big {{ 'pos' if saldo_mes >= 0 else 'neg' }}">{{ saldo_mes | brl }}</div>
+    <div class="sublabel">Igreja Presbiteriana em Loteamento Conceição</div>
+  </div>
+</div>
+
+</body>
+</html>

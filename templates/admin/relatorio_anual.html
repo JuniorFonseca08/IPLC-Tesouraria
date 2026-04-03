@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Relatório Anual{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container d-flex align-items-start justify-content-between flex-wrap gap-3">
+    <div>
+      <p style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
+        <i class="bi bi-calendar3 me-1"></i>Relatório Anual
+      </p>
+      <h1>Consolidado {{ year }}</h1>
+      <p>Congregação Presbiteriana Loteamento Conceição · Rua Araxá, 18</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center no-print flex-wrap">
+      {% for y in range(now.year - 2, now.year + 2) %}
+      <a href="{{ url_for('relatorio_anual', year=y) }}"
+         class="btn btn-sm {% if y == year %}btn-light{% else %}btn-outline-light{% endif %}">
+        {{ y }}
+      </a>
+      {% endfor %}
+      <button onclick="window.print()" class="btn btn-sm ms-2" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);">
+        <i class="bi bi-printer"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- Annual Summary Cards -->
+  <div class="row g-3 mb-5">
+    <div class="col-6 col-md-3">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Dízimos {{ year }}</div>
+        <div class="card-value positive">{{ totais.total_dizimos | brl }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Ofertas {{ year }}</div>
+        <div class="card-value positive">{{ totais.total_ofertas | brl }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-card card-expense">
+        <div class="card-label">Total Saídas {{ year }}</div>
+        <div class="card-value negative">{{ totais.total_saidas | brl }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="summary-card card-balance">
+        <div class="card-label">Saldo Anual {{ year }}</div>
+        <div class="card-value {{ 'positive' if totais.saldo_mes >= 0 else 'negative' }}">{{ totais.saldo_mes | brl }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="table-card mb-4">
+    <div class="table-card-header">
+      <h5><i class="bi bi-graph-up me-2"></i>Entradas × Saídas – {{ year }}</h5>
+    </div>
+    <div class="p-3">
+      <canvas id="annualChart" height="70"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly Breakdown Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5><i class="bi bi-table me-2"></i>Detalhamento por Mês</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th class="text-end">Dízimos</th>
+            <th class="text-end">Ofertas</th>
+            <th class="text-end">Total Entradas</th>
+            <th class="text-end">Desp. Fixas</th>
+            <th class="text-end">Desp. Variáveis</th>
+            <th class="text-end">Total Saídas</th>
+            <th class="text-end">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in meses %}
+          <tr>
+            <td class="fw-600">{{ m.mes_nome }}</td>
+            <td class="text-end">{{ m.total_dizimos | brl }}</td>
+            <td class="text-end">{{ m.total_ofertas | brl }}</td>
+            <td class="text-end text-success fw-600">{{ m.total_entradas | brl }}</td>
+            <td class="text-end">{{ m.total_fixas | brl }}</td>
+            <td class="text-end">{{ m.total_variaveis | brl }}</td>
+            <td class="text-end text-danger fw-600">{{ m.total_saidas | brl }}</td>
+            <td class="text-end fw-700 {{ 'text-success' if m.saldo_mes >= 0 else 'text-danger' }}">
+              {{ m.saldo_mes | brl }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL {{ year }}</td>
+            <td class="text-end">{{ totais.total_dizimos | brl }}</td>
+            <td class="text-end">{{ totais.total_ofertas | brl }}</td>
+            <td class="text-end">{{ totais.total_entradas | brl }}</td>
+            <td class="text-end">{{ totais.total_fixas | brl }}</td>
+            <td class="text-end">{{ totais.total_variaveis | brl }}</td>
+            <td class="text-end">{{ totais.total_saidas | brl }}</td>
+            <td class="text-end {{ 'text-success' if totais.saldo_mes >= 0 else 'text-danger' }}">
+              {{ totais.saldo_mes | brl }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const labels   = {{ meses | map(attribute='mes_nome') | list | tojson }};
+const entradas = {{ meses | map(attribute='total_entradas') | list | tojson }};
+const saidas   = {{ meses | map(attribute='total_saidas')   | list | tojson }};
+const saldos   = {{ meses | map(attribute='saldo_mes')      | list | tojson }};
+
+new Chart(document.getElementById('annualChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Entradas', data: entradas, backgroundColor: 'rgba(45,138,87,.75)', borderRadius: 6, order: 2 },
+      { label: 'Saídas',   data: saidas,   backgroundColor: 'rgba(192,57,43,.65)', borderRadius: 6, order: 3 },
+      { label: 'Saldo',    data: saldos,   type: 'line', borderColor: '#c9a84c', backgroundColor: 'rgba(201,168,76,.15)',
+        pointBackgroundColor: '#c9a84c', tension: .3, fill: true, order: 1 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
+    },
+    scales: {
+      y: { ticks: { callback: v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
+    }
+  }
+});
+</script>
+{% endblock %}

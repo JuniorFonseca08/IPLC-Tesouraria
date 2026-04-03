@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% block title %}Lançar Entradas{% endblock %}
+
+
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <p style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
+      <i class="bi bi-arrow-down-circle me-1"></i>Lançamento de Entradas
+    </p>
+    <h1>Dízimos e Ofertas – {{ mes_nome }} {{ year }}</h1>
+    <p>Os domingos do mês são gerados automaticamente. Preencha os valores.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- ── Seletor de período ── -->
+  <div class="period-controls mb-4"><div class="d-flex align-items-center gap-3 flex-wrap">
+      <label class="period-label"><i class="bi bi-calendar3 me-1"></i>Período</label>
+      <select id="monthSel" class="period-select" onchange="adminNavigate()">
+        {% for num, name in months.items() %}
+        <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      
+      <select id="yearSel" class="period-select" onchange="adminNavigate()">
+        {% for y in range(now.year - 2, now.year + 2) %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div></div>
+
+
+  <!-- Totals -->
+  <div class="row g-3 mb-4">
+    <div class="col-4">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Dízimos</div>
+        <div class="card-value positive" id="totalDizimos">{{ total_dizimos | brl }}</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Ofertas</div>
+        <div class="card-value positive" id="totalOfertas">{{ total_ofertas | brl }}</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Entradas</div>
+        <div class="card-value positive" id="totalEntradas">{{ total_entradas | brl }}</div>
+      </div>
+    </div>
+  </div>
+
+  <input type="hidden" id="saveEndpoint" value="{{ url_for('salvar_entradas') }}" />
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5><i class="bi bi-table me-2"></i>Entradas de {{ mes_nome }} {{ year }}</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:160px;">Data</th>
+            <th class="text-end">Descrição</th>
+            <th class="text-end">Dízimos (R$)</th>
+            <th class="text-end">Ofertas (R$)</th>
+            <th class="text-end">Total</th>
+            <th style="width:80px;" class="text-center">Obs.</th>
+          </tr>
+        </thead>
+        <tbody id="entradasTbody">
+        {% for row in rows %}
+        <tr data-row="{{ loop.index }}" data-row-id="{{ row.row_id }}" data-tipo="{{ row.tipo }}">
+
+          <!-- DATA -->
+          <td>
+            {% if row.tipo == 'extra' %}
+              <input type="date" class="form-control form-control-sm" data-col="data"
+                     value="{{ row.data }}">
+            {% else %}
+              <input type="hidden" data-col="data" value="{{ row.data }}">
+              <span class="fw-500">{{ row.data }}</span>
+            {% endif %}
+          </td>
+        
+          <!-- DESCRIÇÃO (AGORA PARA TODOS) -->
+          <td>
+            <input type="text" class="form-control form-control-sm"
+                   data-col="descricao"
+                   value="{{ row.descricao or '' }}"
+                   placeholder="Descrição">
+          </td>
+        
+          <!-- DÍZIMO -->
+          <td>
+            {% if row.tipo == 'domingo' %}
+              <input type="text" class="form-control form-control-sm currency text-end"
+                     data-col="dizimos"
+                     value="{{ row.dizimos }}">
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        
+          <!-- OFERTA -->
+          <td>
+            <input type="text" class="form-control form-control-sm currency text-end"
+                   data-col="ofertas"
+                   value="{{ row.ofertas }}">
+          </td>
+        
+          <!-- TOTAL -->
+          <td class="text-end fw-600" data-col="total">—</td>
+        
+          <!-- AÇÃO -->
+          <td class="text-center">
+            {% if row.tipo == 'extra' %}
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+          </td>
+        
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL</td>
+            <td></td>
+            <td class="text-end" id="totalDizimos2">{{ total_dizimos | brl }}</td>
+            <td class="text-end" id="totalOfertas2">{{ total_ofertas | brl }}</td>
+            <td class="text-end" id="totalEntradas2">{{ total_entradas | brl }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="p-3 border-top d-flex justify-content-between align-items-center">
+      <button class="btn btn-outline-green btn-sm" onclick="addEntradaExtra()">
+        <i class="bi bi-plus-circle me-1"></i>Adicionar Entrada Extra
+      </button>
+      <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Os valores são salvos automaticamente ao clicar em "Salvar Tudo".</small>
+      <button class="btn btn-primary-green" onclick="saveTable('{{ mes_str }}')">
+        <i class="bi bi-floppy me-2"></i>Salvar Tudo
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script>
+function recalcEntradas() {
+  let totalDizimos = 0;
+  let totalOfertas = 0;
+
+  document.querySelectorAll('#entradasTbody tr').forEach(row => {
+    const tipo = row.dataset.tipo;
+
+    const diz = parseBRL(row.querySelector('[data-col="dizimos"]')?.value || 0) || 0;
+    const ofe = parseBRL(row.querySelector('[data-col="ofertas"]')?.value || 0) || 0;
+
+    if (tipo === 'domingo') totalDizimos += diz;
+    totalOfertas += ofe;
+
+    const totalCell = row.querySelector('[data-col="total"]');
+    if (totalCell) {
+      const total = diz + ofe;
+      totalCell.textContent = total ? formatBRL(total) : '—';
+    }
+  });
+
+  const totalEntradas = totalDizimos + totalOfertas;
+
+  // SAFE UPDATE (evita erro se elemento não existir)
+  const elD = document.getElementById('totalDizimos');
+  const elO = document.getElementById('totalOfertas');
+  const elE = document.getElementById('totalEntradas');
+
+  if (elD) elD.textContent = formatBRL(totalDizimos);
+  if (elO) elO.textContent = formatBRL(totalOfertas);
+  if (elE) elE.textContent = formatBRL(totalEntradas);
+
+  const elD2 = document.getElementById('totalDizimos2');
+  const elO2 = document.getElementById('totalOfertas2');
+  const elE2 = document.getElementById('totalEntradas2');
+
+  if (elD2) elD2.textContent = formatBRL(totalDizimos);
+  if (elO2) elO2.textContent = formatBRL(totalOfertas);
+  if (elE2) elE2.textContent = formatBRL(totalEntradas);
+}
+</script>
+
+<script>
+document.addEventListener('input', (e) => {
+  if (e.target.classList.contains('currency')) {
+    recalcEntradas();
+  }
+});
+</script>
+
+<script>
+function addEntradaExtra() {
+  const tbody = document.getElementById('entradasTbody');
+
+  const tr = document.createElement('tr');
+  tr.setAttribute('data-tipo', 'extra');
+
+  tr.innerHTML = `
+    <td><input type="date" class="form-control form-control-sm" data-col="data"></td>
+    <td><input type="text" class="form-control form-control-sm" data-col="descricao" placeholder="Descrição"></td>
+    <td><span class="text-muted">—</span></td>
+    <td><input type="text" class="form-control form-control-sm currency text-end" data-col="ofertas" placeholder="0,00"></td>
+    <td class="text-end">—</td>
+    <td class="text-center">
+      <button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">
+        <i class="bi bi-trash"></i>
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  recalcEntradas();
+}
+</script>
+
+<script>
+async function deleteRow(btn) {
+  const tr = btn.closest('tr');
+  const rowId = tr.dataset.rowId;
+
+  // Se ainda não foi salvo, só remove da tela
+  if (!rowId) {
+    tr.remove();
+    recalcEntradas();
+    return;
+  }
+
+  if (!confirm('Deseja realmente excluir esta entrada?')) return;
+
+  try {
+    const res = await fetch('/admin/entradas/deletar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row_id: rowId }),
+    });
+
+    let json;
+
+    try {
+      json = await res.json();
+    } catch {
+      showToast('Erro ao processar resposta do servidor', 'error');
+      return;
+    }
+
+    if (json.ok) {
+      tr.remove();
+      recalcEntradas();
+      showToast('Entrada removida!');
+    } else {
+      showToast('Erro ao deletar.', 'error');
+    }
+
+  } catch {
+    showToast('Erro de conexão entrada.', 'error');
+  }
+}
+</script>
+
+<script>
+function formatBRL(valor) {
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+}
+</script>
+{% endblock %}

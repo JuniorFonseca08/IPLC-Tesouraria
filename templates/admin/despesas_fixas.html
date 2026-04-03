@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Despesas Fixas{% endblock %}
+
+
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <p style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
+      <i class="bi bi-receipt-cutoff me-1"></i>Despesas Fixas
+    </p>
+    <h1>Despesas Fixas – {{ mes_nome }} {{ year }}</h1>
+    <p>Categorias pré-definidas. Preencha os valores do mês.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- ── Seletor de período ── -->
+  <div class="period-controls mb-4"><div class="d-flex align-items-center gap-3 flex-wrap">
+      <label class="period-label"><i class="bi bi-calendar3 me-1"></i>Período</label>
+      <select id="monthSel" class="period-select" onchange="adminNavigate()">
+        {% for num, name in months.items() %}
+        <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      
+      <select id="yearSel" class="period-select" onchange="adminNavigate()">
+        {% for y in range(now.year - 2, now.year + 2) %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div></div>
+
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="summary-card card-expense">
+        <div class="card-label">Total Despesas Fixas</div>
+        <div class="card-value negative" id="totalValor">{{ total | brl }}</div>
+      </div>
+    </div>
+  </div>
+
+  <input type="hidden" id="saveEndpoint" value="{{ url_for('salvar_despesas_fixas') }}" />
+
+  <div class="table-card">
+    <div class="table-card-header" style="background:#8b2317;">
+      <h5><i class="bi bi-receipt me-2"></i>Despesas Fixas – {{ mes_nome }} {{ year }}</h5>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;font-size:.82rem;"
+              onclick="savePadrao('{{ mes_str }}')">
+        <i class="bi bi-floppy me-1"></i>Salvar Tudo
+      </button>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th class="text-end" style="width:200px;">Valor (R$)</th>
+            <th class="text-center" style="width:80px;">Ação</th>
+          </tr>
+        </thead>
+        <tbody id="fixaTbody">
+          {% for row in rows %}
+          <tr data-row="{{ loop.index }}" data-row-id="{{ row.row_id }}">
+            <td>
+              {% if row.padrao %}
+                <input type="hidden" data-col="descricao" value="{{ row.descricao }}" />
+                <span class="fw-500">{{ row.descricao }}</span>
+                <span class="badge badge-income ms-2" style="font-size:.7rem;">Padrão</span>
+              {% else %}
+                <input type="text" class="form-control form-control-sm" data-col="descricao" value="{{ row.descricao }}" />
+              {% endif %}
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm currency text-end"
+                     data-col="valor"
+                     value="{{ '%.2f'|format(row.valor|float) if row.valor != '' and row.valor != 0 else '' }}"
+                     placeholder="0,00" />
+            </td>
+            <td class="text-center">
+              {% if not row.padrao and row.row_id %}
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteFixa('{{ row.row_id }}')">
+                <i class="bi bi-trash"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="1">TOTAL</td>
+            <td class="text-end" id="totalValor2">{{ total | brl }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <button class="btn btn-outline-green btn-sm" onclick="addFixaRow('{{ mes_str }}')">
+        <i class="bi bi-plus-circle me-1"></i>Adicionar Despesa Extra
+      </button>
+      <button class="btn btn-primary-green" onclick="savePadrao('{{ mes_str }}')">
+        <i class="bi bi-floppy me-2"></i>Salvar Tudo
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function savePadrao(mes) {
+  const rows = [];
+  document.querySelectorAll('tr[data-row]').forEach(tr => {
+    const desc = tr.querySelector('[data-col="descricao"]')?.value?.trim();
+    const val  = parseBRL(tr.querySelector('[data-col="valor"]')?.value);
+    if (desc) rows.push({ row_id: tr.dataset.rowId || '', descricao: desc, valor: val });
+  });
+
+  try {
+    const res = await fetch('/admin/despesas-fixas/salvar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, rows }),
+    });
+    const json = await res.json();
+    if (json.ok) showToast('Despesas fixas salvas!');
+    else showToast('Erro ao salvar.', 'error');
+  } catch { showToast('Erro de conexão.', 'error'); }
+}
+
+document.addEventListener('input', () => {
+  const v2 = document.getElementById('totalValor2');
+  if (v2) v2.textContent = document.getElementById('totalValor').textContent;
+});
+</script>
+{% endblock %}

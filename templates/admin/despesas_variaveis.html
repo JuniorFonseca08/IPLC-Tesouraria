@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Despesas Variáveis{% endblock %}
+
+
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <p style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
+      <i class="bi bi-cart-plus me-1"></i>Despesas Variáveis
+    </p>
+    <h1>Despesas Variáveis – {{ mes_nome }} {{ year }}</h1>
+    <p>Adicione compras e gastos avulsos do mês.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- ── Seletor de período ── -->
+  <div class="period-controls mb-4"><div class="d-flex align-items-center gap-3 flex-wrap">
+      <label class="period-label"><i class="bi bi-calendar3 me-1"></i>Período</label>
+      <select id="monthSel" class="period-select" onchange="adminNavigate()">
+        {% for num, name in months.items() %}
+        <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      
+      <select id="yearSel" class="period-select" onchange="adminNavigate()">
+        {% for y in range(now.year - 2, now.year + 2) %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div></div>
+
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="summary-card card-expense">
+        <div class="card-label">Total Variáveis</div>
+        <div class="card-value negative" id="totalValor">{{ total | brl }}</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-8 d-flex align-items-center justify-content-md-end">
+      <button class="btn btn-primary-green" onclick="addVariavelRow('{{ mes_str }}')">
+        <i class="bi bi-plus-circle me-2"></i>Adicionar Gasto
+      </button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header" style="background:#7d5a00;">
+      <h5><i class="bi bi-cart me-2"></i>Gastos Variáveis – {{ mes_nome }} {{ year }}</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Data</th>
+            <th>Descrição</th>
+            <th class="text-end" style="width:160px;">Valor (R$)</th>
+            <th class="text-center" style="width:100px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="varTbody">
+          {% if rows %}
+            {% for row in rows %}
+            <tr data-row="{{ loop.index }}" data-row-id="{{ row.row_id }}">
+              <td>
+                <input type="text" class="form-control form-control-sm" data-col="data"
+                       value="{{ row.data }}" placeholder="DD/MM/AAAA" />
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm" data-col="descricao"
+                       value="{{ row.descricao }}" placeholder="Descrição" />
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm currency text-end" data-col="valor"
+                       value="{{ '%.2f'|format(row.valor|float) }}" placeholder="0,00" />
+              </td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-success me-1" onclick="saveVariavel(this, '{{ mes_str }}')">
+                  <i class="bi bi-floppy"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteVariavel('{{ row.row_id }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="emptyRow">
+              <td colspan="4" class="text-center text-muted py-4">
+                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                Nenhum gasto variável registrado. Clique em "Adicionar Gasto".
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">TOTAL VARIÁVEIS</td>
+            <td class="text-end" id="totalValor2">{{ total | brl }}</td>
+            <td class="text-center">
+              <div class="d-flex justify-content-center align-items-center gap-2">
+                <button class="btn btn-primary-green btn-sm"
+                        onclick="saveVariaveis('{{ mes_str }}')">
+                  <i class="bi bi-floppy me-1"></i>Salvar
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+
+
+<script>
+// Remove empty placeholder when adding rows
+const origAddVar = window.addVariavelRow;
+window.addVariavelRow = function(mes) {
+  const empty = document.getElementById('emptyRow');
+  if (empty) empty.remove();
+  origAddVar(mes);
+};
+
+document.addEventListener('input', () => {
+  const v2 = document.getElementById('totalValor2');
+  if (v2) v2.textContent = document.getElementById('totalValor').textContent;
+});
+</script>
+{% endblock %}

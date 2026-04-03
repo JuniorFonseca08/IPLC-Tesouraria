@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+  <div class="container">
+    <p class="mb-1" style="color:rgba(255,255,255,.65);font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;">
+      <i class="bi bi-graph-up me-1"></i>Relatório Financeiro
+    </p>
+    <h1>Igreja Presbiteriana</h1>
+    <p style="color:rgba(255,255,255,.72);margin:0;">em Loteamento Conceição</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- ── Controles de período (DENTRO do container, abaixo do header) ── -->
+  <div class="period-controls mb-4">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+
+      <!-- Toggle Anual / Mensal -->
+      <div class="view-toggle">
+        <a href="{{ url_for('index', year=year, view='anual') }}"
+           class="toggle-btn {{ 'active' if view == 'anual' }}">
+          <i class="bi bi-calendar3 me-1"></i>Anual
+        </a>
+        <a href="{{ url_for('index', year=year, month=month, view='mensal') }}"
+           class="toggle-btn {{ 'active' if view == 'mensal' }}">
+          <i class="bi bi-calendar-week me-1"></i>Mensal
+        </a>
+      </div>
+
+      <!-- Ano -->
+      <div class="d-flex align-items-center gap-2">
+        <label class="period-label">Ano</label>
+        <select id="yearSel" class="period-select" onchange="navigatePeriod()">
+          {% for y in range(now.year - 2, now.year + 2) %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Mês (só no modo mensal) -->
+      {% if view == 'mensal' %}
+      <div class="d-flex align-items-center gap-2">
+        <label class="period-label">Mês</label>
+        <select id="monthSel" class="period-select" onchange="navigatePeriod()">
+          {% for num, name in months.items() %}
+          <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ VISÃO ANUAL ══ -->
+  {% if view == 'anual' %}
+
+    <div class="section-title"><i class="bi bi-bar-chart-fill me-1"></i>Resumo do Ano {{ year }}</div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-cash-stack card-icon"></i>
+          <div class="card-label">Dízimos</div>
+          <div class="card-value positive">{{ totais.total_dizimos | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-gift card-icon"></i>
+          <div class="card-label">Ofertas</div>
+          <div class="card-value positive">{{ totais.total_ofertas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-arrow-down-circle card-icon"></i>
+          <div class="card-label">Total Entradas</div>
+          <div class="card-value positive">{{ totais.total_entradas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-expense position-relative">
+          <i class="bi bi-receipt card-icon"></i>
+          <div class="card-label">Despesas Fixas</div>
+          <div class="card-value negative">{{ totais.total_fixas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-expense position-relative">
+          <i class="bi bi-cart card-icon"></i>
+          <div class="card-label">Desp. Variáveis</div>
+          <div class="card-value negative">{{ totais.total_variaveis | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-balance position-relative">
+          <i class="bi bi-wallet2 card-icon"></i>
+          <div class="card-label">Saldo Anual</div>
+          <div class="card-value {{ 'positive' if totais.saldo_mes >= 0 else 'negative' }}">{{ totais.saldo_mes | brl }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafico -->
+    <div class="section-title">
+      <i class="bi bi-bar-chart-line me-1"></i>Visão Anual – {{ year }}
+    </div>
+    
+    <div class="table-card mb-4">
+      <div class="table-card-header">
+        <h5><i class="bi bi-graph-up me-2"></i>Entradas × Saídas por Mês</h5>
+      </div>
+      <div class="p-3">
+        <canvas id="annualChart" height="80"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabela por mês -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <h5><i class="bi bi-table me-2"></i>Detalhamento por Mês — {{ year }}</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="text-end">Dízimos</th>
+              <th class="text-end">Ofertas</th>
+              <th class="text-end">Entradas</th>
+              <th class="text-end">Saídas</th>
+              <th class="text-end">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in meses %}
+            <tr>
+              <td>
+                <a href="{{ url_for('index', year=year, month=m.num, view='mensal') }}"
+                   class="text-decoration-none fw-500" style="color:var(--green-dark);">
+                  {{ m.mes_nome }}
+                </a>
+              </td>
+              <td class="text-end">{{ m.total_dizimos | brl }}</td>
+              <td class="text-end">{{ m.total_ofertas | brl }}</td>
+              <td class="text-end text-success fw-600">{{ m.total_entradas | brl }}</td>
+              <td class="text-end text-danger fw-600">{{ m.total_saidas | brl }}</td>
+              <td class="text-end fw-700 {{ 'text-success' if m.saldo_mes >= 0 else 'text-danger' }}">
+                {{ m.saldo_mes | brl }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>TOTAL {{ year }}</td>
+              <td class="text-end">{{ totais.total_dizimos | brl }}</td>
+              <td class="text-end">{{ totais.total_ofertas | brl }}</td>
+              <td class="text-end">{{ totais.total_entradas | brl }}</td>
+              <td class="text-end">{{ totais.total_saidas | brl }}</td>
+              <td class="text-end {{ 'text-success' if totais.saldo_mes >= 0 else 'text-danger' }}">
+                {{ totais.saldo_mes | brl }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  {% else %}
+  <!-- ═══════════════════════════════════════ VISÃO MENSAL ══ -->
+
+    <div class="section-title"><i class="bi bi-calendar-week me-1"></i>Resumo de {{ mes_nome }} {{ year }}</div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-cash-stack card-icon"></i>
+          <div class="card-label">Dízimos</div>
+          <div class="card-value positive">{{ mes_total_dizimos | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-gift card-icon"></i>
+          <div class="card-label">Ofertas</div>
+          <div class="card-value positive">{{ mes_total_ofertas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-income position-relative">
+          <i class="bi bi-arrow-down-circle card-icon"></i>
+          <div class="card-label">Total Entradas</div>
+          <div class="card-value positive">{{ mes_total_entradas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-expense position-relative">
+          <i class="bi bi-receipt card-icon"></i>
+          <div class="card-label">Desp. Fixas</div>
+          <div class="card-value negative">{{ mes_total_fixas | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-expense position-relative">
+          <i class="bi bi-cart card-icon"></i>
+          <div class="card-label">Desp. Variáveis</div>
+          <div class="card-value negative">{{ mes_total_variaveis | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="summary-card card-balance position-relative">
+          <i class="bi bi-wallet2 card-icon"></i>
+          <div class="card-label">Saldo do Mês</div>
+          <div class="card-value {{ 'positive' if mes_saldo_mes >= 0 else 'negative' }}">{{ mes_saldo_mes | brl }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="table-card">
+          <div class="table-card-header">
+            <h5><i class="bi bi-arrow-down-circle me-2"></i>Entradas por Domingo</h5>
+            <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:.78rem;">{{ mes_entradas|length }} domingos</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr><th>Data</th><th class="text-end">Dízimos</th><th class="text-end">Ofertas</th><th class="text-end">Total</th></tr>
+              </thead>
+              <tbody>
+                {% for e in mes_entradas %}
+                <tr>
+                  <td>{{ e.data }}</td>
+                  <td class="text-end">{{ e.dizimos | brl }}</td>
+                  <td class="text-end">{{ e.ofertas | brl }}</td>
+                  <td class="text-end fw-600">{{ (e.dizimos + e.ofertas) | brl }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma entrada registrada.</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td class="text-end">{{ mes_total_dizimos | brl }}</td>
+                  <td class="text-end">{{ mes_total_ofertas | brl }}</td>
+                  <td class="text-end">{{ mes_total_entradas | brl }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="table-card mb-4">
+          <div class="table-card-header" style="background:#8b2317;">
+            <h5><i class="bi bi-arrow-up-circle me-2"></i>Despesas Fixas</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>Descrição</th><th class="text-end">Valor</th></tr></thead>
+              <tbody>
+                {% for d in mes_desp_fixas %}
+                <tr><td>{{ d.descricao }}</td><td class="text-end">{{ d.valor | brl }}</td></tr>
+                {% else %}
+                <tr><td colspan="2" class="text-center text-muted py-3">Nenhuma despesa fixa.</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot><tr><td>Total Fixas</td><td class="text-end">{{ mes_total_fixas | brl }}</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-card-header" style="background:#7d5a00;">
+            <h5><i class="bi bi-cart-check me-2"></i>Despesas Variáveis</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>Data</th><th>Descrição</th><th class="text-end">Valor</th></tr></thead>
+              <tbody>
+                {% for d in mes_desp_variaveis %}
+                <tr><td>{{ d.data }}</td><td>{{ d.descricao }}</td><td class="text-end">{{ d.valor | brl }}</td></tr>
+                {% else %}
+                <tr><td colspan="3" class="text-center text-muted py-3">Nenhuma despesa variável.</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot><tr><td colspan="2">Total Variáveis</td><td class="text-end">{{ mes_total_variaveis | brl }}</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
+
+    <!-- Saldo final mensal -->
+    <div class="mt-4 p-4 rounded-3" style="background:var(--green-dark);color:white;">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h4 style="color:white;margin:0;">Resultado de {{ mes_nome }} {{ year }}</h4>
+          <p style="color:rgba(255,255,255,.65);margin:.25rem 0 0;">Total Entradas – Total Saídas</p>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+          <div style="font-size:.8rem;color:rgba(255,255,255,.6);margin-bottom:.25rem;">SALDO DO MÊS</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:2.5rem;color:{{ '#7fff9e' if mes_saldo_mes >= 0 else '#ff8888' }};">
+            {{ mes_saldo_mes | brl }}
+          </div>
+          <div style="font-size:.85rem;color:rgba(255,255,255,.55);margin-top:.2rem;">
+            Entradas: {{ mes_total_entradas | brl }} &nbsp;|&nbsp; Saídas: {{ mes_total_saidas | brl }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  {% endif %}
+
+</div><!-- /container -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function navigatePeriod() {
+  const year  = document.getElementById('yearSel').value;
+  const mSel  = document.getElementById('monthSel');
+  const month = mSel ? mSel.value : '{{ month }}';
+  const view  = '{{ view }}';
+  window.location.href = `/?year=${year}&month=${month}&view=${view}`;
+}
+</script>
+
+<script>
+const labels   = {{ meses | map(attribute='mes_nome') | list | tojson }};
+const entradas = {{ meses | map(attribute='total_entradas') | list | tojson }};
+const saidas   = {{ meses | map(attribute='total_saidas')   | list | tojson }};
+
+new Chart(document.getElementById('annualChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Entradas', data: entradas, backgroundColor: 'rgba(45,138,87,.75)', borderRadius: 6, order: 2 },
+      { label: 'Saídas',   data: saidas,   backgroundColor: 'rgba(192,57,43,.65)', borderRadius: 6, order: 3 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
+    },
+    scales: {
+      y: { ticks: { callback: v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
+    }
+  }
+});
+</script>
+{% endblock %}
