@@ -1,20 +1,22 @@
 services:
   - type: web
-    name: tesouraria-igreja
+    name: iplc-tesouraria
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: gunicorn app:app
+    plan: free
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+      - key: FLASK_ENV
+        value: production
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
       - key: SECRET_KEY
         generateValue: true
-      - key: ADMIN_USER
-        value: tesoureiro
-      - key: ADMIN_PASSWORD_HASH
-        sync: false   # preencher manualmente no dashboard do Render
-      - key: GOOGLE_CREDENTIALS_JSON
-        sync: false   # colar o JSON da service account
       - key: SPREADSHEET_ID
-        sync: false   # ID da planilha
-      - key: FLASK_DEBUG
-        value: "true"
-    healthCheckPath: /
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
