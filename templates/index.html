@@ -15,7 +15,7 @@
 
 <div class="container pb-5">
 
-  <!-- ── Controles de período (DENTRO do container, abaixo do header) ── -->
+  <!-- ── Controles de período ── -->
   <div class="period-controls mb-4">
     <div class="d-flex align-items-center gap-3 flex-wrap">
 
@@ -61,52 +61,61 @@
 
     <div class="section-title"><i class="bi bi-bar-chart-fill me-1"></i>Resumo do Ano {{ year }}</div>
 
+    <!-- Cards do ano — agora com 7 itens, incluindo Saldo em Conta -->
     <div class="row g-3 mb-4">
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-income position-relative">
           <i class="bi bi-cash-stack card-icon"></i>
           <div class="card-label">Dízimos</div>
           <div class="card-value positive">{{ totais.total_dizimos | brl }}</div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-income position-relative">
           <i class="bi bi-gift card-icon"></i>
           <div class="card-label">Ofertas</div>
           <div class="card-value positive">{{ totais.total_ofertas | brl }}</div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-income position-relative">
           <i class="bi bi-arrow-down-circle card-icon"></i>
           <div class="card-label">Total Entradas</div>
           <div class="card-value positive">{{ totais.total_entradas | brl }}</div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-expense position-relative">
           <i class="bi bi-receipt card-icon"></i>
-          <div class="card-label">Despesas Fixas</div>
+          <div class="card-label">Desp. Fixas</div>
           <div class="card-value negative">{{ totais.total_fixas | brl }}</div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-expense position-relative">
           <i class="bi bi-cart card-icon"></i>
           <div class="card-label">Desp. Variáveis</div>
           <div class="card-value negative">{{ totais.total_variaveis | brl }}</div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-lg-2">
+      <div class="col-6 col-md-4 col-lg">
         <div class="summary-card card-balance position-relative">
           <i class="bi bi-wallet2 card-icon"></i>
-          <div class="card-label">Saldo Anual</div>
+          <div class="card-label">Saldo do Ano</div>
           <div class="card-value {{ 'positive' if totais.saldo_mes >= 0 else 'negative' }}">{{ totais.saldo_mes | brl }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg">
+        <div class="summary-card card-balance position-relative">
+          <i class="bi bi-bank card-icon"></i>
+          <div class="card-label">Saldo em Conta</div>
+          <div class="card-value {{ 'positive' if saldo_em_conta_ano >= 0 else 'negative' }}">{{ saldo_em_conta_ano | brl }}</div>
+          <div style="font-size:.65rem;color:var(--grey-600);margin-top:.2rem;">Acum. até Dez/{{ year }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Grafico -->
+    <!-- Gráfico -->
     <div class="section-title">
       <i class="bi bi-bar-chart-line me-1"></i>Visão Anual – {{ year }}
     </div>
@@ -120,7 +129,7 @@
       </div>
     </div>
 
-    <!-- Tabela por mês -->
+    <!-- Tabela por mês — com coluna Saldo Acumulado -->
     <div class="table-card">
       <div class="table-card-header">
         <h5><i class="bi bi-table me-2"></i>Detalhamento por Mês — {{ year }}</h5>
@@ -134,7 +143,8 @@
               <th class="text-end">Ofertas</th>
               <th class="text-end">Entradas</th>
               <th class="text-end">Saídas</th>
-              <th class="text-end">Saldo</th>
+              <th class="text-end">Saldo do Mês</th>
+              <th class="text-end" style="border-left:2px solid var(--green-light);">Saldo em Conta</th>
             </tr>
           </thead>
           <tbody>
@@ -153,6 +163,10 @@
               <td class="text-end fw-700 {{ 'text-success' if m.saldo_mes >= 0 else 'text-danger' }}">
                 {{ m.saldo_mes | brl }}
               </td>
+              <td class="text-end fw-700 {{ 'text-success' if m.saldo_acumulado >= 0 else 'text-danger' }}"
+                  style="border-left:2px solid var(--green-light);background:var(--green-pale);">
+                {{ m.saldo_acumulado | brl }}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -166,6 +180,10 @@
               <td class="text-end {{ 'text-success' if totais.saldo_mes >= 0 else 'text-danger' }}">
                 {{ totais.saldo_mes | brl }}
               </td>
+              <td class="text-end {{ 'text-success' if saldo_em_conta_ano >= 0 else 'text-danger' }}"
+                  style="border-left:2px solid var(--green-bright);">
+                {{ saldo_em_conta_ano | brl }}
+              </td>
             </tr>
           </tfoot>
         </table>
@@ -177,6 +195,7 @@
 
     <div class="section-title"><i class="bi bi-calendar-week me-1"></i>Resumo de {{ mes_nome }} {{ year }}</div>
 
+    <!-- Cards mensais — incluindo Saldo em Conta -->
     <div class="row g-3 mb-4">
       <div class="col-6 col-md-4 col-lg-2">
         <div class="summary-card card-income position-relative">
@@ -215,9 +234,10 @@
       </div>
       <div class="col-6 col-md-4 col-lg-2">
         <div class="summary-card card-balance position-relative">
-          <i class="bi bi-wallet2 card-icon"></i>
-          <div class="card-label">Saldo do Mês</div>
-          <div class="card-value {{ 'positive' if mes_saldo_mes >= 0 else 'negative' }}">{{ mes_saldo_mes | brl }}</div>
+          <i class="bi bi-bank card-icon"></i>
+          <div class="card-label">Saldo em Conta</div>
+          <div class="card-value {{ 'positive' if saldo_em_conta_mes >= 0 else 'negative' }}">{{ saldo_em_conta_mes | brl }}</div>
+          <div style="font-size:.65rem;color:var(--grey-600);margin-top:.2rem;">Ant. {{ saldo_anterior_mes | brl }}</div>
         </div>
       </div>
     </div>
@@ -226,29 +246,30 @@
       <div class="col-lg-6">
         <div class="table-card">
           <div class="table-card-header">
-            <h5><i class="bi bi-arrow-down-circle me-2"></i>Entradas por Domingo</h5>
-            <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:.78rem;">{{ mes_entradas|length }} domingos</span>
+            <h5><i class="bi bi-arrow-down-circle me-2"></i>Entradas</h5>
+            <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:.78rem;">{{ mes_entradas|length }} registros</span>
           </div>
           <div class="table-responsive">
             <table class="table">
               <thead>
-                <tr><th>Data</th><th class="text-end">Dízimos</th><th class="text-end">Ofertas</th><th class="text-end">Total</th></tr>
+                <tr><th>Data</th><th>Descrição</th><th class="text-end">Dízimos</th><th class="text-end">Ofertas</th><th class="text-end">Total</th></tr>
               </thead>
               <tbody>
                 {% for e in mes_entradas %}
                 <tr>
                   <td>{{ e.data }}</td>
+                  <td>{{ e.descricao or '-' }}</td>
                   <td class="text-end">{{ e.dizimos | brl }}</td>
                   <td class="text-end">{{ e.ofertas | brl }}</td>
                   <td class="text-end fw-600">{{ (e.dizimos + e.ofertas) | brl }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma entrada registrada.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-3">Nenhuma entrada registrada.</td></tr>
                 {% endfor %}
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Total</td>
+                  <td colspan="2">Total</td>
                   <td class="text-end">{{ mes_total_dizimos | brl }}</td>
                   <td class="text-end">{{ mes_total_ofertas | brl }}</td>
                   <td class="text-end">{{ mes_total_entradas | brl }}</td>
@@ -300,20 +321,36 @@
       </div>
     </div><!-- /row -->
 
-    <!-- Saldo final mensal -->
+    <!-- Saldo final mensal — Total do Mês + Saldo em Conta -->
     <div class="mt-4 p-4 rounded-3" style="background:var(--green-dark);color:white;">
       <div class="row align-items-center">
-        <div class="col-md-6">
+        <div class="col-md-5">
           <h4 style="color:white;margin:0;">Resultado de {{ mes_nome }} {{ year }}</h4>
           <p style="color:rgba(255,255,255,.65);margin:.25rem 0 0;">Total Entradas – Total Saídas</p>
-        </div>
-        <div class="col-md-6 text-md-end mt-3 mt-md-0">
-          <div style="font-size:.8rem;color:rgba(255,255,255,.6);margin-bottom:.25rem;">SALDO DO MÊS</div>
-          <div style="font-family:'DM Serif Display',serif;font-size:2.5rem;color:{{ '#7fff9e' if mes_saldo_mes >= 0 else '#ff8888' }};">
-            {{ mes_saldo_mes | brl }}
+          <div style="margin-top:1.2rem;">
+            <table style="color:rgba(255,255,255,.75);font-size:.9rem;">
+              <tr><td style="padding-right:1.5rem;">Entradas</td><td>{{ mes_total_entradas | brl }}</td></tr>
+              <tr><td>Saídas</td><td>{{ mes_total_saidas | brl }}</td></tr>
+            </table>
           </div>
-          <div style="font-size:.85rem;color:rgba(255,255,255,.55);margin-top:.2rem;">
-            Entradas: {{ mes_total_entradas | brl }} &nbsp;|&nbsp; Saídas: {{ mes_total_saidas | brl }}
+        </div>
+        <div class="col-md-7 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-4 flex-wrap">
+          <!-- Total do Mês -->
+          <div style="text-align:center;">
+            <div style="font-size:.7rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem;">TOTAL DO MÊS</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:2rem;color:{{ '#7fff9e' if mes_saldo_mes >= 0 else '#ff8888' }};">
+              {{ mes_saldo_mes | brl }}
+            </div>
+          </div>
+          <!-- Separador vertical -->
+          <div style="width:1px;background:rgba(255,255,255,.2);align-self:stretch;"></div>
+          <!-- Saldo em Conta -->
+          <div style="text-align:center;">
+            <div style="font-size:.7rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem;">SALDO EM CONTA</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:2rem;color:{{ '#ffd700' if saldo_em_conta_mes >= 0 else '#ff8888' }};">
+              {{ saldo_em_conta_mes | brl }}
+            </div>
+            <div style="font-size:.72rem;color:rgba(255,255,255,.45);">Acumulado até {{ mes_nome }}</div>
           </div>
         </div>
       </div>
@@ -339,6 +376,7 @@ function navigatePeriod() {
 const labels   = {{ meses | map(attribute='mes_nome') | list | tojson }};
 const entradas = {{ meses | map(attribute='total_entradas') | list | tojson }};
 const saidas   = {{ meses | map(attribute='total_saidas')   | list | tojson }};
+const saldos   = {{ meses | map(attribute='saldo_acumulado') | list | tojson }};
 
 new Chart(document.getElementById('annualChart'), {
   type: 'bar',
@@ -347,6 +385,9 @@ new Chart(document.getElementById('annualChart'), {
     datasets: [
       { label: 'Entradas', data: entradas, backgroundColor: 'rgba(45,138,87,.75)', borderRadius: 6, order: 2 },
       { label: 'Saídas',   data: saidas,   backgroundColor: 'rgba(192,57,43,.65)', borderRadius: 6, order: 3 },
+      { label: 'Saldo em Conta', data: saldos, type: 'line', borderColor: '#c9a84c',
+        backgroundColor: 'rgba(201,168,76,.12)', pointBackgroundColor: '#c9a84c',
+        tension: .3, fill: true, order: 1, borderWidth: 2 },
     ]
   },
   options: {

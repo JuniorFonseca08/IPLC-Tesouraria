@@ -80,8 +80,8 @@
           <!-- DATA -->
           <td>
             {% if row.tipo == 'extra' %}
-              <input type="date" class="form-control form-control-sm" data-col="data"
-                     value="{{ row.data }}">
+              <input type="text" class="form-control form-control-sm date-mask" data-col="data"
+                     value="{{ row.data }}" placeholder="DD/MM/AAAA" maxlength="10">
             {% else %}
               <input type="hidden" data-col="data" value="{{ row.data }}">
               <span class="fw-500">{{ row.data }}</span>
@@ -215,7 +215,7 @@ function addEntradaExtra() {
   tr.setAttribute('data-tipo', 'extra');
 
   tr.innerHTML = `
-    <td><input type="date" class="form-control form-control-sm" data-col="data"></td>
+    <td><input type="text" class="form-control form-control-sm date-mask" data-col="data" placeholder="DD/MM/AAAA" maxlength="10"></td>
     <td><input type="text" class="form-control form-control-sm" data-col="descricao" placeholder="Descrição"></td>
     <td><span class="text-muted">—</span></td>
     <td><input type="text" class="form-control form-control-sm currency text-end" data-col="ofertas" placeholder="0,00"></td>
@@ -226,6 +226,8 @@ function addEntradaExtra() {
       </button>
     </td>
   `;
+  const newDateInput = tr.querySelector('.date-mask');
+  if (newDateInput && typeof applyDateMask === 'function') applyDateMask(newDateInput);
   tbody.appendChild(tr);
   recalcEntradas();
 }

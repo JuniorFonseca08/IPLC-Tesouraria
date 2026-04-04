@@ -14,10 +14,10 @@
       <p>Congregação Presbiteriana Loteamento Conceição · Rua Araxá, 18</p>
     </div>
     <div class="d-flex gap-2 align-self-center no-print">
-      <a href="{{ url_for('relatorio_mensal_pdf', year=year, month=month) }}"
-         class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);">
+      <button id="exportPdfBtn" onclick="exportarPDF()"
+         class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);cursor:pointer;">
         <i class="bi bi-file-pdf me-1"></i>Exportar PDF
-      </a>
+      </button>
       <button onclick="window.print()" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);">
         <i class="bi bi-printer me-1"></i>Imprimir
       </button>
@@ -174,6 +174,9 @@
         <table style="color:rgba(255,255,255,.85);font-size:.9rem;width:100%;">
           <tr><td>Entrada Dízimos</td><td class="text-end">{{ total_dizimos | brl }}</td></tr>
           <tr><td>Entrada Ofertas</td><td class="text-end">{{ total_ofertas | brl }}</td></tr>
+          {% if total_extras and total_extras > 0 %}
+          <tr><td>Entradas Extras</td><td class="text-end">{{ total_extras | brl }}</td></tr>
+          {% endif %}
           <tr style="border-top:1px solid rgba(255,255,255,.2);"><td><strong>Total Entradas</strong></td><td class="text-end"><strong>{{ total_entradas | brl }}</strong></td></tr>
           <tr style="margin-top:.5rem;"><td>Despesas Fixas</td><td class="text-end">{{ total_fixas | brl }}</td></tr>
           <tr><td>Despesas Variáveis</td><td class="text-end">{{ total_variaveis | brl }}</td></tr>
@@ -181,17 +184,25 @@
         </table>
       </div>
       <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex flex-column justify-content-center">
-        <div style="font-size:.8rem;color:rgba(255,255,255,.6);margin-bottom:.3rem;text-transform:uppercase;">
-          Saldo em Conta
+        <!-- Saldo do mês (total_mes) -->
+        <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.2);">
+          <div style="font-size:.75rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;">TOTAL DO MÊS</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:2rem;color:{{ '#7fff9e' if saldo_mes >= 0 else '#ff8888' }};">
+            {{ saldo_mes | brl }}
+          </div>
+          <div style="font-size:.8rem;color:rgba(255,255,255,.5);">Entradas − Saídas de {{ mes_nome }}</div>
         </div>
-        <table style="color:rgba(255,255,255,.85);font-size:.9rem;width:100%;">
-          <tr><td>Saldo do Mês</td><td class="text-end">{{ saldo_mes | brl }}</td></tr>
-          <tr><td>Saldo Anterior</td><td class="text-end">{{ saldo_anterior | brl }}</td></tr>
-        </table>
-          <div style="font-family:'DM Serif Display',serif;font-size:3rem;color:{{ '#7fff9e' if saldo_conta >= 0 else '#ff8888' }};">
+        <!-- Saldo em conta (acumulado) -->
+        <div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;">SALDO EM CONTA</div>
+          <table style="color:rgba(255,255,255,.75);font-size:.85rem;width:100%;margin-bottom:.4rem;">
+            <tr><td>Saldo Anterior</td><td class="text-end">{{ saldo_anterior | brl }}</td></tr>
+            <tr><td>Total do Mês</td><td class="text-end">{{ saldo_mes | brl }}</td></tr>
+          </table>
+          <div style="font-family:'DM Serif Display',serif;font-size:2.5rem;color:{{ '#7fff9e' if saldo_conta >= 0 else '#ff8888' }};">
             {{ saldo_conta | brl }}
           </div>
-          <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-top:.5rem;">
+          <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-top:.2rem;">
             Acumulado até {{ mes_nome }} {{ year }}
           </div>
         </div>
@@ -200,4 +211,100 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_head %}
+<!-- html2canvas e jsPDF para exportação client-side -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function exportarPDF() {
+  const btn = document.getElementById('exportPdfBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Gerando PDF...';
+
+  // Elementos a esconder durante a captura
+  const sidebar    = document.querySelector('.sidebar');
+  const footerEl   = document.querySelector('footer');
+  const noPrint    = document.querySelectorAll('.no-print, .period-controls');
+  const appLayout  = document.querySelector('.app-layout');
+  const mainCont   = document.querySelector('.main-content');
+
+  // Salvar estilos originais
+  const origSidebar  = sidebar   ? sidebar.style.cssText   : '';
+  const origFooter   = footerEl  ? footerEl.style.cssText  : '';
+  const origLayout   = appLayout ? appLayout.style.cssText : '';
+  const origMain     = mainCont  ? mainCont.style.cssText  : '';
+
+  // Esconder nav e sidebar, expandir conteúdo
+  if (sidebar)   { sidebar.style.display   = 'none'; }
+  if (footerEl)  { footerEl.style.display  = 'none'; }
+  noPrint.forEach(el => el.style.visibility = 'hidden');
+  if (appLayout) { appLayout.style.cssText = 'display:block;width:100%;'; }
+  if (mainCont)  { mainCont.style.cssText  = 'width:100%;max-width:100%;'; }
+
+  // Pequena pausa para o DOM re-renderizar
+  await new Promise(r => setTimeout(r, 350));
+
+  try {
+    const captured = document.querySelector('.main-content') || document.body;
+
+    const canvas = await html2canvas(captured, {
+      scale: 1.8,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#f5f6fa',
+      windowWidth: 1280,
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.93);
+    const { jsPDF } = window.jspdf;
+
+    const pdf      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW    = pdf.internal.pageSize.getWidth();
+    const pageH    = pdf.internal.pageSize.getHeight();
+    const imgH     = (canvas.height * pageW) / canvas.width;
+
+    // Adiciona conteúdo em múltiplas páginas se necessário
+    let remaining = imgH;
+    let yOffset   = 0;
+    pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
+    remaining -= pageH;
+
+    while (remaining > 0) {
+      yOffset -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
+      remaining -= pageH;
+    }
+
+    pdf.save('relatorio-{{ mes_str }}.pdf');
+
+  } catch (err) {
+    alert('Não foi possível gerar o PDF.\nUse o botão Imprimir e escolha \"Salvar como PDF\".');
+    console.error(err);
+  } finally {
+    // Restaurar tudo
+    if (sidebar)   sidebar.style.cssText   = origSidebar;
+    if (footerEl)  footerEl.style.cssText  = origFooter;
+    noPrint.forEach(el => el.style.visibility = '');
+    if (appLayout) appLayout.style.cssText = origLayout;
+    if (mainCont)  mainCont.style.cssText  = origMain;
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-pdf me-1"></i>Exportar PDF';
+  }
+}
+</script>
+
+<script>
+function adminNavigate() {
+  const m = document.getElementById('monthSel').value;
+  const y = document.getElementById('yearSel').value;
+  window.location.href = `/admin/relatorio-mensal?year=${y}&month=${m}`;
+}
+</script>
 {% endblock %}

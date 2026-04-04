@@ -66,8 +66,8 @@
             {% for row in rows %}
             <tr data-row="{{ loop.index }}" data-row-id="{{ row.row_id }}">
               <td>
-                <input type="text" class="form-control form-control-sm" data-col="data"
-                       value="{{ row.data }}" placeholder="DD/MM/AAAA" />
+                <input type="text" class="form-control form-control-sm date-mask" data-col="data"
+                       value="{{ row.data }}" placeholder="DD/MM/AAAA" maxlength="10" />
               </td>
               <td>
                 <input type="text" class="form-control form-control-sm" data-col="descricao"

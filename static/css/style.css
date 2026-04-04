@@ -37,7 +37,7 @@ h1,h2,h3,h4,h5,h6 {
   color: var(--green-dark);
 }
 
-main { flex: 1; }
+.app-layout { flex: 1; }
 
 /* ── Month Bar ─────────────────────────────────────────────────────── */
 .month-bar {
@@ -270,10 +270,40 @@ footer small { display: block; margin-top: .25rem; }
 
 /* ── Print ──────────────────────────────────────────────────────────── */
 @media print {
-  .navbar, .month-bar, footer, .btn, .no-print { display: none !important; }
-  .page-header { background: var(--green-dark) !important; -webkit-print-color-adjust: exact; }
-  body { background: white; }
+  @page { size: A4; margin: 1.5cm; }
+
+  .sidebar, footer, .btn, .no-print,
+  .period-controls, .view-toggle,
+  .navbar, .month-bar { display: none !important; }
+
+  .app-layout { display: block !important; }
+  .main-content { width: 100% !important; }
+
+  body { background: white !important; }
+
+  .page-header {
+    background: #1a4731 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin-bottom: 12pt;
+  }
+
+  .table-card { box-shadow: none !important; border: 1pt solid #d6f0e2 !important; break-inside: avoid; }
+  .table-card-header { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .summary-card { box-shadow: none !important; break-inside: avoid; }
+
+  .table thead th {
+    background: #f0faf5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .table tfoot td {
+    background: #d6f0e2 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
+
 
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 576px) {

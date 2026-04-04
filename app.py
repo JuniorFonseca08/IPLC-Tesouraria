@@ -12,6 +12,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tesouraria-igreja-secret-2026')
 
+# Garantir que a SECRET_KEY não é o valor padrão em produção
+if app.secret_key == 'tesouraria-igreja-secret-2026' and os.environ.get('FLASK_ENV') == 'production':
+    raise RuntimeError("SECRET_KEY não configurada para produção!")
+
 db = SheetsDB()
 
 MONTHS_PT = {
@@ -106,25 +110,58 @@ def get_monthly_summary(mes_str):
 
 def get_annual_summary(year):
     """
-    Calcula todos os 12 meses em uma passagem — apenas 3 chamadas à API total
-    (pois os dados das 3 abas já estão em cache após o primeiro acesso).
+    Calcula todos os 12 meses em uma passagem — apenas 3 chamadas à API total.
+    Cada mês recebe 'saldo_acumulado': o saldo em conta ao fim daquele mês
+    (soma de todos os meses do ano até ele, sem contar anos anteriores aqui).
+    Para o acumulado real desde o início, ver get_saldo_acumulado().
     """
     e_all = db.get_all_entradas()
     f_all = db.get_all_despesas_fixas()
     v_all = db.get_all_despesas_variaveis()
 
+    # Saldo acumulado de anos anteriores (base de partida do ano)
+    saldo_base = get_saldo_acumulado(f"{year}-01")
+
     meses  = []
     totais = dict(total_dizimos=0, total_ofertas=0, total_entradas=0, total_extras=0,
                   total_fixas=0, total_variaveis=0, total_saidas=0, saldo_mes=0)
 
+    saldo_corrente = saldo_base
     for m in range(1, 13):
         ms = f"{year}-{m:02d}"
         s  = _summarize(e_all, f_all, v_all, ms)
-        meses.append({'mes_nome': MONTHS_PT[m], 'num': m, **s})
+        saldo_corrente += s['saldo_mes']
+        meses.append({'mes_nome': MONTHS_PT[m], 'num': m, 'saldo_acumulado': saldo_corrente, **s})
         for k in totais:
             totais[k] += s[k]
 
     return meses, totais
+
+
+def get_saldo_acumulado(mes_str):
+    """
+    Calcula o saldo acumulado desde o início até o mês anterior a mes_str.
+    Representa o dinheiro em conta antes do mês atual.
+    """
+    year, month = map(int, mes_str.split('-'))
+
+    e_all = db.get_all_entradas()
+    f_all = db.get_all_despesas_fixas()
+    v_all = db.get_all_despesas_variaveis()
+
+    saldo_acumulado = 0.0
+
+    # Soma todos os meses anteriores ao mês informado
+    for y in range(2020, year + 1):
+        for m in range(1, 13):
+            # Para quando chegar ao mês atual
+            if y == year and m >= month:
+                break
+            ms = f"{y}-{m:02d}"
+            s = _summarize(e_all, f_all, v_all, ms)
+            saldo_acumulado += s['saldo_mes']
+
+    return saldo_acumulado
 
 
 # ── PUBLIC ───────────────────────────────────────────────────────────────────
@@ -145,6 +182,14 @@ def index():
     mes_str = f"{year}-{month:02d}"
     mes_summary = get_monthly_summary(mes_str)
 
+    # Saldo em conta do mês selecionado (acumulado até o fim do mês)
+    saldo_anterior_mes = get_saldo_acumulado(mes_str)
+    saldo_em_conta_mes = saldo_anterior_mes + mes_summary.get('saldo_mes', 0)
+
+    # Saldo em conta do ano (acumulado total até dezembro)
+    ultimo_mes = meses[-1]  # dezembro
+    saldo_em_conta_ano = ultimo_mes['saldo_acumulado']
+
     return render_template('index.html',
         year=year, month=month, view=view,
         mes_nome=MONTHS_PT[month],
@@ -152,6 +197,9 @@ def index():
         now=now,
         meses=meses,
         totais=totais,
+        saldo_em_conta_ano=saldo_em_conta_ano,
+        saldo_anterior_mes=saldo_anterior_mes,
+        saldo_em_conta_mes=saldo_em_conta_mes,
         **{f'mes_{k}': v for k, v in mes_summary.items()},
     )
 
@@ -178,7 +226,7 @@ def login():
 
         if ok:
             session['user'] = username
-            # NÃO limpa cache no login — dados ainda são válidos
+            session.permanent = True
             return redirect(url_for('index'))
 
         error = 'Usuário ou senha inválidos.'
@@ -189,44 +237,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated
-
-# ── ADMIN DASHBOARD ───────────────────────────────────────────────────────────
-
-@app.route('/')
-@login_required
-def admin_dashboard():
-    now   = datetime.now()
-    year  = int(request.args.get('year',  now.year))
-    month = int(request.args.get('month', now.month))
-    mes_str = f"{year}-{month:02d}"
-
-    # 3 chamadas à API (com cache); depois tudo é Python
-    summary      = get_monthly_summary(mes_str)
-    meses, _     = get_annual_summary(year)
-
-    # quick annual stats for chart
-    annual = [{'mes': m['mes_nome'], 'num': m['num'],
-               'entradas': m['total_entradas'],
-               'saidas':   m['total_saidas'],
-               'saldo':    m['saldo_mes']} for m in meses]
-
-    return render_template('admin/index.html',
-        year=year, month=month,
-        mes_nome=MONTHS_PT[month],
-        months=MONTHS_PT,
-        now=now,
-        annual=annual,
-        **summary
-    )
+    return redirect(url_for('login'))
 
 
 # ── ENTRADAS ─────────────────────────────────────────────────────────────────
@@ -241,8 +252,7 @@ def admin_entradas():
 
     sundays        = get_sundays(year, month)
     entradas_saved = db.get_entradas(mes_str)
-    sundays = get_sundays(year, month)
-    sunday_strs = [d.strftime('%d/%m/%Y') for d in sundays]
+    sunday_strs    = [d.strftime('%d/%m/%Y') for d in sundays]
 
     rows = []
 
@@ -258,7 +268,7 @@ def admin_entradas():
             'tipo': 'domingo'
         })
 
-    # EXTRAS
+    # EXTRAS — datas que não são domingos
     extras = [e for e in entradas_saved if e['data'] not in sunday_strs]
 
     for e in extras:
@@ -315,7 +325,6 @@ def deletar_entrada():
         return jsonify({'ok': True})
 
     except Exception as e:
-        print('ERRO AO DELETAR:', e)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── DESPESAS FIXAS ───────────────────────────────────────────────────────────
@@ -458,7 +467,7 @@ def relatorio_mensal():
     mes_str = f"{year}-{month:02d}"
 
     summary = get_monthly_summary(mes_str)
-    saldo_anterior = get_saldo_anterior(mes_str)
+    saldo_anterior = get_saldo_acumulado(mes_str)
     saldo_mes = summary.get('saldo_mes', 0)
     saldo_conta = saldo_anterior + saldo_mes
 
@@ -471,7 +480,6 @@ def relatorio_mensal():
         mes_str=mes_str,
         now=now,
         **summary,
-
         saldo_anterior=saldo_anterior,
         saldo_conta=saldo_conta
     )
@@ -488,21 +496,6 @@ def relatorio_anual():
         meses=meses, totais=totais, now=now
     )
 
-def get_saldo_anterior(mes_str):
-    year, month = map(int, mes_str.split('-'))
-
-    if month == 1:
-        prev_year = year - 1
-        prev_month = 12
-    else:
-        prev_year = year
-        prev_month = month - 1
-
-    prev_mes = f"{prev_year}-{prev_month:02d}"
-    resumo = get_monthly_summary(prev_mes)
-
-    return resumo['saldo_mes']
-
 
 # ── PDF ───────────────────────────────────────────────────────────────────────
 
@@ -515,11 +508,16 @@ def relatorio_mensal_pdf():
     mes_str = f"{year}-{month:02d}"
     summary = get_monthly_summary(mes_str)
 
+    saldo_anterior = get_saldo_acumulado(mes_str)
+    saldo_conta = saldo_anterior + summary.get('saldo_mes', 0)
+
     html = render_template('admin/relatorio_pdf.html',
         year=year, month=month,
         mes_nome=MONTHS_PT[month],
         mes_str=mes_str,
         now=now,
+        saldo_anterior=saldo_anterior,
+        saldo_conta=saldo_conta,
         **summary
     )
 
@@ -531,20 +529,10 @@ def relatorio_mensal_pdf():
         response.headers['Content-Disposition'] = f'attachment; filename=relatorio_{mes_str}.pdf'
         return response
     except Exception as e:
-        print("Erro PDF:", e)
         return html, 200, {'Content-Type': 'text/html'}
-
-
-# ── API JSON ──────────────────────────────────────────────────────────────────
-
-@app.route('/api/resumo/<mes_str>')
-def api_resumo(mes_str):
-    s = get_monthly_summary(mes_str)
-    # remove listas para não expor dados internos na API pública
-    return jsonify({k: v for k, v in s.items() if not isinstance(v, list)})
 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port,
-            debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug)

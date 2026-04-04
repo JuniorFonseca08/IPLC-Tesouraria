@@ -172,46 +172,50 @@ class SheetsDB:
     def upsert_entradas_batch(self, mes, rows_data):
         ws = self._get_ws(TAB_ENTRADAS)
         changed = False
-    
+        result_rows = []
+
         def normalize_date(date_str):
+            """Garante que a data esteja no formato dd/mm/yyyy."""
             if not date_str:
                 return ''
-            
-            # já está no formato correto
             if '/' in date_str:
                 return date_str
-            
-            # formato yyyy-mm-dd → dd/mm/yyyy
             if '-' in date_str:
                 try:
                     y, m, d = date_str.split('-')
                     return f"{d}/{m}/{y}"
-                except:
+                except Exception:
                     return date_str
-            
             return date_str
-    
+
         for row in rows_data:
             data = normalize_date(row.get('data'))
-    
-            diz = row.get('dizimos', 0)
-            ofe = row.get('ofertas', 0)
+            diz  = row.get('dizimos', 0)
+            ofe  = row.get('ofertas', 0)
             desc = row.get('descricao', '')
             tipo = row.get('tipo', 'domingo')
-    
+
             values = [mes, data, str(diz), str(ofe), desc, tipo]
-    
-            if row.get('row_id'):
-                rid = int(row['row_id'])
+
+            row_id = row.get('row_id')
+            if row_id:
+                rid = int(row_id)
                 ws.update(f'A{rid}:F{rid}', [values])
                 changed = True
-    
-            elif diz or ofe:
+                result_rows.append({**row, 'row_id': str(rid)})
+            elif diz or ofe or desc:
                 ws.append_row(values)
                 changed = True
-    
+                all_data = ws.get_all_values()
+                new_rid = str(len(all_data))
+                result_rows.append({**row, 'row_id': new_rid})
+            else:
+                result_rows.append(row)
+
         if changed:
             self._invalidate(TAB_ENTRADAS)
+
+        return result_rows
     
     # compatibilidade com rotas existentes
     def insert_entrada(self, mes, data, dizimos, ofertas):

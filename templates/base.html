@@ -28,8 +28,7 @@
 {% endwith %}
 
 <!-- MAIN -->
-<main>
-  <div class="app-layout">
+<div class="app-layout">
 
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -41,7 +40,7 @@
     </div>
 
     <nav class="sidebar-menu">
-      <a href="{{ url_for('admin_dashboard') }}"
+      <a href="{{ url_for('index') }}"
         class="menu-item {% if request.endpoint == 'index' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Início
       </a>
@@ -85,7 +84,6 @@
   </main>
 
 </div>
-</main>
 
 <!-- FOOTER -->
 <footer>

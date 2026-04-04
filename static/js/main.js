@@ -27,6 +27,24 @@ document.addEventListener('input', (e) => {
   e.target.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 });
 
+/* ── Máscara de data dd/mm/aaaa ────────────────────────────────────── */
+function applyDateMask(input) {
+  input.addEventListener('input', function () {
+    let v = this.value.replace(/\D/g, '');
+    if (v.length > 8) v = v.slice(0, 8);
+    if (v.length >= 5) {
+      v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+    } else if (v.length >= 3) {
+      v = v.slice(0, 2) + '/' + v.slice(2);
+    }
+    this.value = v;
+  });
+}
+
+function initDateMasks() {
+  document.querySelectorAll('[data-col="data"], .date-mask').forEach(applyDateMask);
+}
+
 /* ── Toast helper ──────────────────────────────────────────────────── */
 function showToast(msg, type = 'success') {
   let toast = document.getElementById('saveToast');
@@ -98,7 +116,7 @@ document.addEventListener('input', (e) => {
   calcTableTotals();
 });
 
-/* ── Save entries (Entradas / Despesas Fixas) ──────────────────────── */
+/* ── Save entries (Entradas) ───────────────────────────────────────── */
 async function saveTable(mes) {
   const trs = document.querySelectorAll('#entradasTbody tr');
   const rows = [];
@@ -124,20 +142,20 @@ async function saveTable(mes) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ mes, rows })
     });
-    console.log('STATUS:', res.status);
 
     const json = await res.json();
 
     if (json.ok) {
+      // Atualiza row_id nas linhas novas
+      if (json.rows) {
+        json.rows.forEach((r, index) => {
+          if (trs[index] && !trs[index].dataset.rowId && r.row_id) {
+            trs[index].dataset.rowId = r.row_id;
+          }
+        });
+      }
 
-      // 🔥 Atualiza row_id nas linhas
-      json.rows.forEach((r, index) => {
-        if (!trs[index].dataset.rowId) {
-          trs[index].dataset.rowId = r.row_id;
-        }
-      });
-
-      recalcEntradas(); // 🔥 recalcula tudo
+      recalcEntradas();
       showToast('Salvo com sucesso!');
 
     } else {
@@ -145,29 +163,8 @@ async function saveTable(mes) {
     }
 
   } catch {
-    showToast('Erro de conexão main', 'error');
+    showToast('Erro de conexão', 'error');
   }
-}
-
-function getExtras() {
-  const rows = [];
-
-  document.querySelectorAll('#extrasTable tbody tr').forEach(tr => {
-    rows.push({
-      row_id: tr.dataset.rowId || '',
-      data: tr.querySelector('[data-col="data"]').value,
-      descricao: tr.querySelector('[data-col="descricao"]').value,
-      valor: parseBRL(tr.querySelector('[data-col="valor"]').value)
-    });
-  });
-
-  return rows;
-}
-
-function formatDateBR(date) {
-  if (!date) return '';
-  const [y, m, d] = date.split('-');
-  return `${d}/${m}/${y}`;
 }
 
 /* ── Add variable expense row ─────────────────────────────────────── */
@@ -179,7 +176,7 @@ function addVariavelRow(mes) {
   tr.dataset.row = idx;
   tr.dataset.rowId = '';
   tr.innerHTML = `
-    <td><input type="text" class="form-control form-control-sm" data-col="data" placeholder="DD/MM/AAAA" /></td>
+    <td><input type="text" class="form-control form-control-sm date-mask" data-col="data" placeholder="DD/MM/AAAA" maxlength="10" /></td>
     <td><input type="text" class="form-control form-control-sm" data-col="descricao" placeholder="Descrição" /></td>
     <td><input type="text" class="form-control form-control-sm currency text-end" data-col="valor" placeholder="0,00" /></td>
     <td class="text-center">
@@ -187,7 +184,9 @@ function addVariavelRow(mes) {
       <button class="btn btn-sm btn-outline-danger ms-1" onclick="this.closest('tr').remove(); calcTableTotals()"><i class="bi bi-trash"></i></button>
     </td>`;
   tbody.appendChild(tr);
-  tr.querySelector('[data-col="data"]').focus();
+  const dateInput = tr.querySelector('[data-col="data"]');
+  applyDateMask(dateInput);
+  dateInput.focus();
 }
 
 async function saveVariavel(btn, mes) {
@@ -247,10 +246,7 @@ async function saveVariaveis(mes) {
 
     if (json.ok) {
       showToast('Despesas salvas!');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-
+      setTimeout(() => window.location.reload(), 500);
     } else {
       showToast('Erro ao salvar', 'error');
     }
@@ -331,6 +327,7 @@ async function saveFixaRow(btn, mes) {
 document.addEventListener('DOMContentLoaded', () => {
   initMonthSelector();
   calcTableTotals();
+  initDateMasks();
 });
 
 /* ── Admin period navigation ─────────────────────────────────────────── */
