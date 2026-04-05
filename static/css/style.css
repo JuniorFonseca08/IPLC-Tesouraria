@@ -77,7 +77,7 @@ h1,h2,h3,h4,h5,h6 {
 .summary-card {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 1.4rem 1.6rem;
+  padding: 1.2rem 1rem;
   box-shadow: var(--shadow-sm);
   border-left: 4px solid var(--green-bright);
   transition: transform .2s, box-shadow .2s;
@@ -98,9 +98,10 @@ h1,h2,h3,h4,h5,h6 {
 }
 .card-value {
   font-family: 'DM Serif Display', serif;
-  font-size: 1.7rem;
+  font-size: 1.45rem;
   color: var(--green-dark);
   line-height: 1.1;
+  white-space: nowrap;
 }
 .card-value.positive { color: var(--green-bright); }
 .card-value.negative { color: var(--red-soft); }

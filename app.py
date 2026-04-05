@@ -26,12 +26,14 @@ MONTHS_PT = {
 
 DESPESAS_FIXAS_PADRAO = [
     'Côngrua Pastoral (IPLC e IPC)',
+    'Passagem Ver. Moisés',
+    'Cesta Pastoral',
     'Energia Elétrica',
     'Plano de Internet',
     'Zeladoria',
-    'Água Mineral',
     'Supremo Concílio',
     'PPNB',
+    'Água Mineral',
 ]
 
 
@@ -62,6 +64,21 @@ def fmt_brl(value):
 
 
 app.jinja_env.filters['brl'] = fmt_brl
+
+
+def get_period():
+    now = datetime.now()
+    y_arg = request.args.get('year')
+    m_arg = request.args.get('month')
+
+    if y_arg:
+        session['current_year'] = int(y_arg)
+    if m_arg:
+        session['current_month'] = int(m_arg)
+
+    y = session.get('current_year', now.year)
+    m = session.get('current_month', now.month)
+    return y, m
 
 
 # ── Core: agrega dados por mês a partir de dados já em memória ──────────────
@@ -170,11 +187,10 @@ def get_saldo_acumulado(mes_str):
 @login_required
 def index():
     now  = datetime.now()
-    year = int(request.args.get('year', now.year))
+    year, month = get_period()
 
     # view: 'anual' (padrão) ou 'mensal'
     view  = request.args.get('view', 'anual')
-    month = int(request.args.get('month', now.month))
 
     meses, totais = get_annual_summary(year)
 
@@ -246,8 +262,7 @@ def logout():
 @login_required
 def admin_entradas():
     now   = datetime.now()
-    year  = int(request.args.get('year',  now.year))
-    month = int(request.args.get('month', now.month))
+    year, month = get_period()
     mes_str = f"{year}-{month:02d}"
 
     sundays        = get_sundays(year, month)
@@ -333,8 +348,7 @@ def deletar_entrada():
 @login_required
 def admin_despesas_fixas():
     now   = datetime.now()
-    year  = int(request.args.get('year',  now.year))
-    month = int(request.args.get('month', now.month))
+    year, month = get_period()
     mes_str = f"{year}-{month:02d}"
 
     saved     = db.get_despesas_fixas(mes_str)
@@ -395,8 +409,7 @@ def deletar_despesa_fixa():
 @login_required
 def admin_despesas_variaveis():
     now   = datetime.now()
-    year  = int(request.args.get('year',  now.year))
-    month = int(request.args.get('month', now.month))
+    year, month = get_period()
     mes_str = f"{year}-{month:02d}"
 
     rows  = db.get_despesas_variaveis(mes_str)
@@ -462,8 +475,7 @@ def salvar_tudo_variaveis():
 @login_required
 def relatorio_mensal():
     now   = datetime.now()
-    year  = int(request.args.get('year',  now.year))
-    month = int(request.args.get('month', now.month))
+    year, month = get_period()
     mes_str = f"{year}-{month:02d}"
 
     summary = get_monthly_summary(mes_str)
@@ -488,12 +500,18 @@ def relatorio_mensal():
 @login_required
 def relatorio_anual():
     now   = datetime.now()
-    year  = int(request.args.get('year', now.year))
+    year, month = get_period()
     meses, totais = get_annual_summary(year)
+
+    if meses:
+        saldo_em_conta_ano = meses[-1]['saldo_acumulado']
+    else:
+        saldo_em_conta_ano = 0
 
     return render_template('admin/relatorio_anual.html',
         year=year, months=MONTHS_PT,
-        meses=meses, totais=totais, now=now
+        meses=meses, totais=totais, now=now,
+        saldo_em_conta_ano=saldo_em_conta_ano
     )
 
 
@@ -503,8 +521,7 @@ def relatorio_anual():
 @login_required
 def relatorio_mensal_pdf():
     now     = datetime.now()
-    year    = int(request.args.get('year',  now.year))
-    month   = int(request.args.get('month', now.month))
+    year, month = get_period()
     mes_str = f"{year}-{month:02d}"
     summary = get_monthly_summary(mes_str)
 

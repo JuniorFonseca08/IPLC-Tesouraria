@@ -18,6 +18,9 @@
         {{ y }}
       </a>
       {% endfor %}
+      <button id="exportPdfBtn" onclick="exportarPDF()" class="btn btn-sm ms-2" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);cursor:pointer;">
+        <i class="bi bi-file-pdf me-1"></i>Exportar PDF
+      </button>
       <button onclick="window.print()" class="btn btn-sm ms-2" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);">
         <i class="bi bi-printer"></i>
       </button>
@@ -29,28 +32,34 @@
 
   <!-- Annual Summary Cards -->
   <div class="row g-3 mb-5">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg">
       <div class="summary-card card-income">
         <div class="card-label">Total Dízimos {{ year }}</div>
         <div class="card-value positive">{{ totais.total_dizimos | brl }}</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg">
       <div class="summary-card card-income">
         <div class="card-label">Total Ofertas {{ year }}</div>
         <div class="card-value positive">{{ totais.total_ofertas | brl }}</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg">
       <div class="summary-card card-expense">
         <div class="card-label">Total Saídas {{ year }}</div>
         <div class="card-value negative">{{ totais.total_saidas | brl }}</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-lg">
       <div class="summary-card card-balance">
         <div class="card-label">Saldo Anual {{ year }}</div>
         <div class="card-value {{ 'positive' if totais.saldo_mes >= 0 else 'negative' }}">{{ totais.saldo_mes | brl }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+      <div class="summary-card card-balance">
+        <div class="card-label">Saldo em Conta</div>
+        <div class="card-value {{ 'positive' if saldo_em_conta_ano >= 0 else 'negative' }}">{{ saldo_em_conta_ano | brl }}</div>
       </div>
     </div>
   </div>
@@ -82,6 +91,7 @@
             <th class="text-end">Desp. Variáveis</th>
             <th class="text-end">Total Saídas</th>
             <th class="text-end">Saldo</th>
+            <th class="text-end" style="border-left:2px solid var(--green-light);">Saldo em Conta</th>
           </tr>
         </thead>
         <tbody>
@@ -96,6 +106,10 @@
             <td class="text-end text-danger fw-600">{{ m.total_saidas | brl }}</td>
             <td class="text-end fw-700 {{ 'text-success' if m.saldo_mes >= 0 else 'text-danger' }}">
               {{ m.saldo_mes | brl }}
+            </td>
+            <td class="text-end fw-700 {{ 'text-success' if m.saldo_acumulado >= 0 else 'text-danger' }}"
+                style="border-left:2px solid var(--green-light);background:var(--green-pale);">
+              {{ m.saldo_acumulado | brl }}
             </td>
           </tr>
           {% endfor %}
@@ -112,6 +126,10 @@
             <td class="text-end {{ 'text-success' if totais.saldo_mes >= 0 else 'text-danger' }}">
               {{ totais.saldo_mes | brl }}
             </td>
+            <td class="text-end {{ 'text-success' if saldo_em_conta_ano >= 0 else 'text-danger' }}"
+                style="border-left:2px solid var(--green-bright);">
+              {{ saldo_em_conta_ano | brl }}
+            </td>
           </tr>
         </tfoot>
       </table>
@@ -121,7 +139,93 @@
 </div>
 {% endblock %}
 
+{% block extra_head %}
+<!-- html2canvas e jsPDF para exportação client-side -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+{% endblock %}
+
 {% block extra_scripts %}
+<script>
+async function exportarPDF() {
+  const btn = document.getElementById('exportPdfBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Gerando PDF...';
+
+  // Elementos a esconder durante a captura
+  const sidebar    = document.querySelector('.sidebar');
+  const footerEl   = document.querySelector('footer');
+  const noPrint    = document.querySelectorAll('.no-print, .period-controls');
+  const appLayout  = document.querySelector('.app-layout');
+  const mainCont   = document.querySelector('.main-content');
+
+  // Salvar estilos originais
+  const origSidebar  = sidebar   ? sidebar.style.cssText   : '';
+  const origFooter   = footerEl  ? footerEl.style.cssText  : '';
+  const origLayout   = appLayout ? appLayout.style.cssText : '';
+  const origMain     = mainCont  ? mainCont.style.cssText  : '';
+
+  // Esconder nav e sidebar, expandir conteúdo
+  if (sidebar)   { sidebar.style.display   = 'none'; }
+  if (footerEl)  { footerEl.style.display  = 'none'; }
+  noPrint.forEach(el => el.style.visibility = 'hidden');
+  if (appLayout) { appLayout.style.cssText = 'display:block;width:100%;'; }
+  if (mainCont)  { mainCont.style.cssText  = 'width:100%;max-width:100%;'; }
+
+  // Pequena pausa para o DOM re-renderizar
+  await new Promise(r => setTimeout(r, 350));
+
+  try {
+    const captured = document.querySelector('.main-content') || document.body;
+
+    const canvas = await html2canvas(captured, {
+      scale: 1.8,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#f5f6fa',
+      windowWidth: 1280,
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.93);
+    const { jsPDF } = window.jspdf;
+
+    const pdf      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW    = pdf.internal.pageSize.getWidth();
+    const pageH    = pdf.internal.pageSize.getHeight();
+    const imgH     = (canvas.height * pageW) / canvas.width;
+
+    // Adiciona conteúdo em múltiplas páginas se necessário
+    let remaining = imgH;
+    let yOffset   = 0;
+    pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
+    remaining -= pageH;
+
+    while (remaining > 0) {
+      yOffset -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
+      remaining -= pageH;
+    }
+
+    pdf.save('relatorio-anual-{{ year }}.pdf');
+
+  } catch (err) {
+    alert('Não foi possível gerar o PDF.\nUse o botão Imprimir e escolha \"Salvar como PDF\".');
+    console.error(err);
+  } finally {
+    // Restaurar tudo
+    if (sidebar)   sidebar.style.cssText   = origSidebar;
+    if (footerEl)  footerEl.style.cssText  = origFooter;
+    noPrint.forEach(el => el.style.visibility = '');
+    if (appLayout) appLayout.style.cssText = origLayout;
+    if (mainCont)  mainCont.style.cssText  = origMain;
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-pdf me-1"></i>Exportar PDF';
+  }
+}
+</script>
+
 <script>
 const labels   = {{ meses | map(attribute='mes_nome') | list | tojson }};
 const entradas = {{ meses | map(attribute='total_entradas') | list | tojson }};
@@ -141,6 +245,7 @@ new Chart(document.getElementById('annualChart'), {
   },
   options: {
     responsive: true,
+    animation: false,
     plugins: {
       legend: { position: 'top' },
       tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
