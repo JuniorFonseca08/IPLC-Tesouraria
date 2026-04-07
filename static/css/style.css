@@ -470,3 +470,96 @@ footer small { display: block; margin-top: .25rem; }
   font-size: 1.1rem;
   color: #fff;
 }
+
+/* ── PDF Export Mode (A4 Landscape 16pt Font Size Fit) ───────────────────────── */
+.pdf-export {
+  width: 1122px !important;
+  max-width: 1122px !important;
+  padding: 15px 30px !important;
+  margin: 0 auto !important;
+  background: white !important;
+}
+
+.pdf-export * {
+  line-height: 1.25 !important;
+}
+
+.pdf-export .table tbody td,
+.pdf-export .table tfoot td {
+  font-size: 22px !important; /* ~16.5pt in PDF */
+  padding: 8px 12px !important; /* More breathing room */
+}
+
+.pdf-export .table thead th {
+  font-size: 20px !important; /* ~15pt */
+  padding: 8px 12px !important;
+}
+
+.pdf-export h1 { font-size: 30px !important; margin-bottom: 6px !important; }
+.pdf-export h5 { font-size: 24px !important; margin: 0 !important; }
+.pdf-export p, .pdf-export span { font-size: 18px !important; }
+
+.pdf-export .summary-card {
+  padding: 12px 15px !important;
+}
+.pdf-export .card-value {
+  font-size: 24px !important; /* ~18pt */
+}
+.pdf-export .card-label {
+  font-size: 16px !important; /* ~12pt */
+  margin-bottom: 12px !important;
+}
+
+/* Force exact flex layout for structural rows to prevent wrapping */
+.pdf-export .row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  margin-left: -8px !important;
+  margin-right: -8px !important;
+}
+.pdf-export .row > * {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.pdf-export .col-md-3 {
+  width: 25% !important;
+  flex: 0 0 25% !important;
+}
+.pdf-export .col-lg-7 {
+  width: 58.33% !important;
+  flex: 0 0 58.33% !important;
+}
+.pdf-export .col-lg-5 {
+  width: 41.67% !important;
+  flex: 0 0 41.67% !important;
+}
+.pdf-export .col-md-4 {
+  width: 33.33% !important;
+  flex: 0 0 33.33% !important;
+}
+
+/* Allow summary cards row to wrap in annual report if needed */
+.pdf-export .anual-summary-row {
+  flex-wrap: wrap !important;
+}
+.pdf-export .anual-summary-row > div {
+  width: 33.33% !important;
+  flex: 0 0 33.33% !important;
+  margin-bottom: 15px !important;
+}
+
+.pdf-export .table-card-header {
+  padding: 12px 16px !important;
+}
+.pdf-export .table-card {
+  margin-bottom: 15px !important;
+}
+.pdf-export .mt-5 {
+  margin-top: 15px !important;
+}
+.pdf-export i.bi { display: none !important; } /* Hide icons to save horizontal space */
+
+/* Reduce padding in finals result box */
+.pdf-export .card-body { padding: 10px 15px !important; }
+.pdf-export .mb-4 { margin-bottom: 15px !important; }
+.pdf-export .mb-5 { margin-bottom: 20px !important; }

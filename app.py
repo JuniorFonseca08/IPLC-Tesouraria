@@ -95,7 +95,7 @@ def _summarize(entradas_all, fixas_all, variaveis_all, mes_str):
     td = sum(float(e.get('dizimos', 0)) for e in entradas)
     to = sum(float(e.get('ofertas',  0)) for e in entradas)
     tx = sum(float(e.get('extra',    0)) for e in entradas)
-    te = td + to
+    te = td + to + tx
     tf = sum(float(d.get('valor', 0)) for d in desp_fixas)
     tv = sum(float(d.get('valor', 0)) for d in desp_var)
     ts = tf + tv
@@ -140,7 +140,7 @@ def get_annual_summary(year):
     saldo_base = get_saldo_acumulado(f"{year}-01")
 
     meses  = []
-    totais = dict(total_dizimos=0, total_ofertas=0, total_entradas=0, total_extras=0,
+    totais = dict(total_dizimos=0, total_ofertas=0, total_extras=0, total_entradas=0,
                   total_fixas=0, total_variaveis=0, total_saidas=0, saldo_mes=0)
 
     saldo_corrente = saldo_base
@@ -278,6 +278,7 @@ def admin_entradas():
             'data': ds,
             'dizimos': saved.get('dizimos', ''),
             'ofertas': saved.get('ofertas', ''),
+            'extra': saved.get('extra', ''),
             'descricao': saved.get('descricao', ''),
             'row_id': saved.get('row_id', ''),
             'tipo': 'domingo'
@@ -289,8 +290,9 @@ def admin_entradas():
     for e in extras:
         rows.append({
             'data': e.get('data'),
-            'dizimos': 0,
+            'dizimos': e.get('dizimos', ''),
             'ofertas': e.get('ofertas', ''),
+            'extra': e.get('extra', ''),
             'row_id': e.get('row_id'),
             'descricao': e.get('descricao', ''),
             'tipo': 'extra'
@@ -298,6 +300,7 @@ def admin_entradas():
 
     td = sum(float(e.get('dizimos', 0) or 0) for e in entradas_saved)
     to = sum(float(e.get('ofertas',  0) or 0) for e in entradas_saved)
+    tx = sum(float(e.get('extra',    0) or 0) for e in entradas_saved)
 
     return render_template('admin/entradas.html',
         year=year, month=month,
@@ -307,7 +310,8 @@ def admin_entradas():
         rows=rows,
         total_dizimos=td,
         total_ofertas=to,
-        total_entradas=td + to,
+        total_extras=tx,
+        total_entradas=td + to + tx,
         now=now
     )
 
@@ -485,6 +489,7 @@ def relatorio_mensal():
 
     return render_template(
         'admin/relatorio_mensal.html',
+        #'admin/relatorio_pdf.html',
         year=year,
         month=month,
         mes_nome=MONTHS_PT[month],

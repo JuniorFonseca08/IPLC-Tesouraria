@@ -84,29 +84,37 @@ function initMonthSelector() {
 /* ── Auto-recalc totals ─────────────────────────────────────────────── */
 function calcRowTotal(row) {
   const dizimos = parseBRL(row.querySelector('[data-col="dizimos"]')?.value);
-  const ofertas = parseBRL(row.querySelector('[data-col="ofertas"]')?.value);
+  const ofertas = row.dataset.tipo === 'domingo' 
+                ? parseBRL(row.querySelector('[data-col="ofertas"]')?.value) 
+                : parseBRL(row.querySelector('[data-col="ofertas"]')?.value);
+  const extra   = parseBRL(row.querySelector('[data-col="extra"]')?.value);
   const totalEl = row.querySelector('[data-col="total"]');
-  if (totalEl) totalEl.textContent = fmtBRL(dizimos + ofertas);
+  if (totalEl) totalEl.textContent = fmtBRL(dizimos + ofertas + extra);
 }
 
 function calcTableTotals() {
-  let sumDizimos = 0, sumOfertas = 0, sumValor = 0;
+  let sumDizimos = 0, sumOfertas = 0, sumExtras = 0, sumValor = 0;
 
   document.querySelectorAll('tr[data-row]').forEach(row => {
     const dEl = row.querySelector('[data-col="dizimos"]');
     const oEl = row.querySelector('[data-col="ofertas"]');
+    const eEl = row.querySelector('[data-col="extra"]');
     const vEl = row.querySelector('[data-col="valor"]');
+
     if (dEl) sumDizimos += parseBRL(dEl.value);
     if (oEl) sumOfertas += parseBRL(oEl.value);
+    if (eEl) sumExtras  += parseBRL(eEl.value);
     if (vEl) sumValor   += parseBRL(vEl.value);
+
     calcRowTotal(row);
   });
 
   const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmtBRL(v); };
-  setEl('totalDizimos', sumDizimos);
-  setEl('totalOfertas', sumOfertas);
-  setEl('totalEntradas', sumDizimos + sumOfertas);
-  setEl('totalValor', sumValor);
+  setEl('totalDizimos',  sumDizimos);
+  setEl('totalOfertas',  sumOfertas);
+  setEl('totalExtras',   sumExtras);
+  setEl('totalEntradas', sumDizimos + sumOfertas + sumExtras);
+  setEl('totalValor',    sumValor);
 }
 
 document.addEventListener('input', (e) => {
@@ -127,8 +135,9 @@ async function saveTable(mes) {
     rows.push({
       row_id: row.dataset.rowId || '',
       data: get('data'),
-      dizimos: row.dataset.tipo === 'domingo' ? parseBRL(get('dizimos')) || 0 : 0,
+      dizimos: parseBRL(get('dizimos')) || 0,
       ofertas: parseBRL(get('ofertas')) || 0,
+      extra:   parseBRL(get('extra')) || 0,
       descricao: get('descricao') || '',
       tipo: row.dataset.tipo || 'domingo'
     });
