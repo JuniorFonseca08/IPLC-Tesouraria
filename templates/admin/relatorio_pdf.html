@@ -301,24 +301,26 @@
   </div>
 
   <!-- ── Resultado Final ─────────────────────────────────────────── -->
-  <div style="margin-top: 20pt; background: #f8faf9; border-radius: 8pt; padding: 10pt; border: 0.5pt solid #e0e0e0;">
-    <div style="display: flex; align-items: center; gap: 16pt;">
+  <div style="margin-top: 20pt; background: #f8faf9; border-radius: 8pt; padding: 12pt; border: 0.5pt solid #e0e0e0;">
+    <div style="display: flex; align-items: center; gap: 10pt;">
 
       <!-- Fluxo -->
-      <div style="flex: 1;">
-        <table style="width: 100%; font-size: 14pt; color: #333;">
+      <div style="flex: 1.2;">
+        <table style="width: 100%; font-size: 13.5pt; color: #333;">
           <tr>
-            <td style="padding: 2pt 0; color: #666;">Total Entradas</td>
-            <td style="text-align: right; font-weight: 700; color: #2d8a57;">{{ total_entradas | brl }}</td>
+            <td style="padding: 3pt 0; color: #666; white-space: nowrap;">Total Entradas</td>
+            <td style="text-align: right; font-weight: 700; color: #2d8a57; white-space: nowrap;">{{ total_entradas |
+              brl }}</td>
           </tr>
           <tr>
-            <td style="padding: 2pt 0; color: #666;">Total Saídas</td>
-            <td style="text-align: right; font-weight: 700; color: #c0392b;">{{ total_saidas | brl }}</td>
+            <td style="padding: 3pt 0; color: #666; white-space: nowrap;">Total Saídas</td>
+            <td style="text-align: right; font-weight: 700; color: #c0392b; white-space: nowrap;">{{ total_saidas | brl
+              }}</td>
           </tr>
           <tr style="border-top: 1pt solid #dcdcdc;">
-            <td style="padding: 4pt 0; font-weight: 700; color: #1a4731;">RESULTADO DO MÊS</td>
+            <td style="padding: 5pt 0; font-weight: 700; color: #1a4731; white-space: nowrap;">RESULTADO DO MÊS</td>
             <td
-              style="text-align: right; font-weight: 700; font-size: 16pt; color: {{ '#2d8a57' if saldo_mes >= 0 else '#c0392b' }};">
+              style="text-align: right; font-weight: 700; font-size: 15.5pt; color: {{ '#2d8a57' if saldo_mes >= 0 else '#c0392b' }}; white-space: nowrap;">
               {{ saldo_mes | brl }}
             </td>
           </tr>
@@ -326,19 +328,48 @@
       </div>
 
       <!-- Separador -->
-      <div style="width: 0.5pt; height: 45pt; background: #dcdcdc;"></div>
+      <div style="width: 0.5pt; height: 50pt; background: #dcdcdc; margin: 0 10pt;"></div>
 
       <!-- Saldo Final -->
-      <div style="flex: 1.2; text-align: center;">
-        <div style="font-size: 10pt; font-weight: 700; color: #666; text-transform: uppercase; margin-bottom: 3pt;">
-          Saldo em Conta
-        </div>
-        <div style="font-size: 22pt; font-weight: 700; color: #c9a84c;">
-          {{ saldo_conta | brl }}
-        </div>
-        <div style="font-size: 9pt; color: #999; margin-top: 2pt;">
+      <div style="flex: 1.5; text-align: center;">
+
+
+        <!-- Soma Simples Stack -->
+        <table style="margin: 0 auto 5pt auto; font-size: 9.5pt; font-weight: 600; color: #666; border-collapse: collapse; white-space: nowrap;">
+          <tr>
+            <td style="text-align: right; font-weight: 500; color: #999; padding-right: 6pt; padding-bottom: 2pt;">Saldo Anterior</td>
+            <td style="text-align: right; padding-bottom: 2pt;">{{ saldo_anterior | brl }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: right; font-weight: 500; color: #999; padding-right: 6pt;">
+              <span style="color: #ccc; margin-right: 2pt;">{{ '+' if saldo_mes >= 0 else '-' }}</span> Resultado do Mês
+            </td>
+            <td style="text-align: right; color: {{ '#2d8a57' if saldo_mes >= 0 else '#c0392b' }};">
+              {{ (saldo_mes if saldo_mes >= 0 else (saldo_mes * -1)) | brl }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <div style="border-top: 1pt solid #e0e0e0; margin-top: 4pt; margin-bottom: 4pt;"></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: right; padding-right: 6pt; vertical-align: middle;">
+              <div style="font-size: 10.5pt; font-weight: 700; color: #666; text-transform: uppercase;">
+                Saldo em Conta
+              </div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <div style="font-size: 22pt; font-weight: 700; color: #c9a84c; line-height: 1;">
+                {{ saldo_conta | brl }}
+              </div>
+            </td>
+          </tr>
+        </table>
+        <div style="font-size: 9pt; color: #999; margin-top: 6pt; white-space: nowrap;">
           Acumulado até {{ mes_nome }} {{ year }}
         </div>
+
       </div>
 
     </div>
