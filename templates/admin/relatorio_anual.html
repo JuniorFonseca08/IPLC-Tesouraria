@@ -31,7 +31,7 @@
 <div class="container pb-5">
 
   <!-- Annual Summary Cards -->
-  <div class="row g-3 mb-5">
+  <div class="row g-3 mb-5 anual-summary-row">
     <div class="col-6 col-md-4 col-lg">
       <div class="summary-card card-income">
         <div class="card-label">Total Dízimos {{ year }}</div>
@@ -42,6 +42,12 @@
       <div class="summary-card card-income">
         <div class="card-label">Total Ofertas {{ year }}</div>
         <div class="card-value positive">{{ totais.total_ofertas | brl }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+      <div class="summary-card card-income">
+        <div class="card-label">Total Extras {{ year }}</div>
+        <div class="card-value positive">{{ totais.total_extras | brl }}</div>
       </div>
     </div>
     <div class="col-6 col-md-4 col-lg">
@@ -86,6 +92,7 @@
             <th>Mês</th>
             <th class="text-end">Dízimos</th>
             <th class="text-end">Ofertas</th>
+            <th class="text-end">Extras</th>
             <th class="text-end">Total Entradas</th>
             <th class="text-end">Desp. Fixas</th>
             <th class="text-end">Desp. Variáveis</th>
@@ -100,6 +107,7 @@
             <td class="fw-600">{{ m.mes_nome }}</td>
             <td class="text-end">{{ m.total_dizimos | brl }}</td>
             <td class="text-end">{{ m.total_ofertas | brl }}</td>
+            <td class="text-end">{{ m.total_extras | brl }}</td>
             <td class="text-end text-success fw-600">{{ m.total_entradas | brl }}</td>
             <td class="text-end">{{ m.total_fixas | brl }}</td>
             <td class="text-end">{{ m.total_variaveis | brl }}</td>
@@ -119,6 +127,7 @@
             <td>TOTAL {{ year }}</td>
             <td class="text-end">{{ totais.total_dizimos | brl }}</td>
             <td class="text-end">{{ totais.total_ofertas | brl }}</td>
+            <td class="text-end">{{ totais.total_extras | brl }}</td>
             <td class="text-end">{{ totais.total_entradas | brl }}</td>
             <td class="text-end">{{ totais.total_fixas | brl }}</td>
             <td class="text-end">{{ totais.total_variaveis | brl }}</td>
@@ -170,26 +179,26 @@ async function exportarPDF() {
   if (footerEl)  { footerEl.style.display  = 'none'; }
   noPrint.forEach(el => el.style.visibility = 'hidden');
   if (appLayout) { appLayout.style.cssText = 'display:block;width:100%;'; }
-  if (mainCont)  { mainCont.style.cssText  = 'width:100%;max-width:100%;'; }
+    if (mainCont)  { mainCont.style.cssText  = 'width:100%;max-width:100%;'; mainCont.classList.add('pdf-export', 'anual'); }
 
   // Pequena pausa para o DOM re-renderizar
-  await new Promise(r => setTimeout(r, 350));
+  await new Promise(r => setTimeout(r, 400));
 
   try {
     const captured = document.querySelector('.main-content') || document.body;
 
     const canvas = await html2canvas(captured, {
-      scale: 1.8,
+      scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#f5f6fa',
-      windowWidth: 1280,
+      backgroundColor: '#ffffff',
+      windowWidth: 1122,
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.93);
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const { jsPDF } = window.jspdf;
 
-    const pdf      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pdf      = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pageW    = pdf.internal.pageSize.getWidth();
     const pageH    = pdf.internal.pageSize.getHeight();
     const imgH     = (canvas.height * pageW) / canvas.width;
@@ -218,7 +227,7 @@ async function exportarPDF() {
     if (footerEl)  footerEl.style.cssText  = origFooter;
     noPrint.forEach(el => el.style.visibility = '');
     if (appLayout) appLayout.style.cssText = origLayout;
-    if (mainCont)  mainCont.style.cssText  = origMain;
+    if (mainCont)  { mainCont.style.cssText  = origMain; mainCont.classList.remove('pdf-export', 'anual'); }
 
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-file-pdf me-1"></i>Exportar PDF';

@@ -7,19 +7,19 @@
 <div class="page-header">
   <div class="container d-flex align-items-start justify-content-between flex-wrap gap-3">
     <div>
-      <p style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
+      <p
+        style="color:rgba(255,255,255,.65);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">
         <i class="bi bi-file-earmark-text me-1"></i>Relatório Financeiro
       </p>
       <h1>{{ mes_nome }} {{ year }}</h1>
       <p>Congregação Presbiteriana Loteamento Conceição · Rua Araxá, 18</p>
     </div>
     <div class="d-flex gap-2 align-self-center no-print">
-      <button id="exportPdfBtn" onclick="exportarPDF()"
-         class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);cursor:pointer;">
+      <button id="exportPdfBtn"
+        onclick="window.open('{{ url_for('relatorio_mensal_pdf', year=year, month=month) }}', '_blank')"
+        class="btn btn-sm"
+        style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);cursor:pointer;">
         <i class="bi bi-file-pdf me-1"></i>Exportar PDF
-      </button>
-      <button onclick="window.print()" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3);">
-        <i class="bi bi-printer me-1"></i>Imprimir
       </button>
     </div>
   </div>
@@ -28,24 +28,26 @@
 <div class="container pb-5">
 
   <!-- ── Seletor de período ── -->
-  <div class="period-controls mb-4"><div class="d-flex align-items-center gap-3 flex-wrap">
+  <div class="period-controls mb-4">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
       <label class="period-label"><i class="bi bi-calendar3 me-1"></i>Período</label>
       <select id="monthSel" class="period-select" onchange="adminNavigate()">
         {% for num, name in months.items() %}
-        <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+        <option value="{{ num }}" {% if num==month %}selected{% endif %}>{{ name }}</option>
         {% endfor %}
       </select>
-      
+
       <select id="yearSel" class="period-select" onchange="adminNavigate()">
         {% for y in range(now.year - 2, now.year + 2) %}
-        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
       </select>
-    </div></div>
+    </div>
+  </div>
 
 
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
+  <div class="row g-3 mb-4 no-print">
     <div class="col-6 col-md-3">
       <div class="summary-card card-income">
         <div class="card-label">Total Dízimos</div>
@@ -75,11 +77,10 @@
   <div class="row g-4">
 
     <!-- ENTRADAS -->
-    <div class="col-12">
+    <div class="col-lg-7">
       <div class="table-card">
         <div class="table-card-header">
           <h5><i class="bi bi-arrow-down-circle me-2"></i>ENTRADAS</h5>
-          <span style="color:rgba(255,255,255,.75);font-size:.85rem;">Total: {{ total_entradas | brl }}</span>
         </div>
         <div class="table-responsive">
           <table class="table">
@@ -89,6 +90,7 @@
                 <th>Descrição</th>
                 <th class="text-end">Dízimos</th>
                 <th class="text-end">Ofertas</th>
+                <th class="text-end">Extra</th>
                 <th class="text-end">Total</th>
               </tr>
             </thead>
@@ -99,10 +101,13 @@
                 <td>{{ e.descricao or '-' }}</td>
                 <td class="text-end">{{ e.dizimos | brl }}</td>
                 <td class="text-end">{{ e.ofertas | brl }}</td>
-                <td class="text-end fw-600">{{ (e.dizimos + e.ofertas) | brl }}</td>
+                <td class="text-end">{{ e.extra | brl }}</td>
+                <td class="text-end fw-600">{{ (e.dizimos + e.ofertas + e.extra) | brl }}</td>
               </tr>
               {% else %}
-              <tr><td colspan="5" class="text-center text-muted py-3">Nenhuma entrada registrada.</td></tr>
+              <tr>
+                <td colspan="6" class="text-center text-muted py-3">Nenhuma entrada registrada.</td>
+              </tr>
               {% endfor %}
             </tbody>
             <tfoot>
@@ -110,6 +115,7 @@
                 <td colspan="2"> ENTRADAS</td>
                 <td class="text-end">{{ total_dizimos | brl }}</td>
                 <td class="text-end">{{ total_ofertas | brl }}</td>
+                <td class="text-end">{{ total_extras | brl }}</td>
                 <td class="text-end">{{ total_entradas | brl }}</td>
               </tr>
             </tfoot>
@@ -118,92 +124,161 @@
       </div>
     </div>
 
-    <!-- DESPESAS FIXAS -->
-    <div class="col-md-6">
-      <div class="table-card h-100">
-        <div class="table-card-header" style="background:#8b2317;">
-          <h5><i class="bi bi-receipt me-2"></i>DESPESAS FIXAS</h5>
-          <span style="color:rgba(255,255,255,.75);font-size:.85rem;">{{ total_fixas | brl }}</span>
-        </div>
-        <div class="table-responsive">
-          <table class="table">
-            <thead><tr><th>Descrição</th><th class="text-end">Valor</th></tr></thead>
-            <tbody>
-              {% for d in desp_fixas %}
-              <tr><td>{{ d.descricao }}</td><td class="text-end">{{ d.valor | brl }}</td></tr>
-              {% else %}
-              <tr><td colspan="2" class="text-center text-muted py-3">Nenhuma despesa fixa.</td></tr>
-              {% endfor %}
-            </tbody>
-            <tfoot><tr><td>TOTAL FIXAS</td><td class="text-end">{{ total_fixas | brl }}</td></tr></tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
+    <!-- LADO DIREITO: DESPESAS -->
+    <div class="col-lg-5">
+      <div class="d-flex flex-column gap-4">
 
-    <!-- DESPESAS VARIÁVEIS -->
-    <div class="col-md-6">
-      <div class="table-card h-100">
-        <div class="table-card-header" style="background:#7d5a00;">
-          <h5><i class="bi bi-cart me-2"></i>DESPESAS VARIÁVEIS</h5>
-          <span style="color:rgba(255,255,255,.75);font-size:.85rem;">{{ total_variaveis | brl }}</span>
+        <!-- DESPESAS FIXAS -->
+        <div class="table-card">
+          <div class="table-card-header" style="background:#8b2317;">
+            <h5><i class="bi bi-receipt me-2"></i>DESPESAS FIXAS</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th class="text-end">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for d in desp_fixas %}
+                <tr>
+                  <td>{{ d.descricao }}</td>
+                  <td class="text-end">{{ d.valor | brl }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="2" class="text-center text-muted py-3">Nenhuma despesa fixa.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>TOTAL FIXAS</td>
+                  <td class="text-end">{{ total_fixas | brl }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-        <div class="table-responsive">
-          <table class="table">
-            <thead><tr><th>Data</th><th>Descrição</th><th class="text-end">Valor</th></tr></thead>
-            <tbody>
-              {% for d in desp_variaveis %}
-              <tr><td>{{ d.data }}</td><td>{{ d.descricao }}</td><td class="text-end">{{ d.valor | brl }}</td></tr>
-              {% else %}
-              <tr><td colspan="3" class="text-center text-muted py-3">Nenhuma despesa variável.</td></tr>
-              {% endfor %}
-            </tbody>
-            <tfoot><tr><td colspan="2">TOTAL VARIÁVEIS</td><td class="text-end">{{ total_variaveis | brl }}</td></tr></tfoot>
-          </table>
+
+        <!-- DESPESAS VARIÁVEIS -->
+        <div class="table-card">
+          <div class="table-card-header" style="background:#7d5a00;">
+            <h5><i class="bi bi-cart me-2"></i>DESPESAS VARIÁVEIS</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th class="text-end">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for d in desp_variaveis %}
+                <tr>
+                  <td>{{ d.data }}</td>
+                  <td>{{ d.descricao }}</td>
+                  <td class="text-end">{{ d.valor | brl }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-3">Nenhuma despesa variável.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2">TOTAL VARIÁVEIS</td>
+                  <td class="text-end">{{ total_variaveis | brl }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
+
       </div>
     </div>
 
   </div><!-- /row -->
 
   <!-- Final Result -->
-  <div class="mt-4 p-4 rounded-3" style="background:var(--green-dark);color:white;">
-    <div class="row">
-      <div class="col-md-6">
-        <h5 style="color:white;margin-bottom:1rem;">Resultado Final – {{ mes_nome }} {{ year }}</h5>
-        <table style="color:rgba(255,255,255,.85);font-size:.9rem;width:100%;">
-          <tr><td>Entrada Dízimos</td><td class="text-end">{{ total_dizimos | brl }}</td></tr>
-          <tr><td>Entrada Ofertas</td><td class="text-end">{{ total_ofertas | brl }}</td></tr>
-          {% if total_extras and total_extras > 0 %}
-          <tr><td>Entradas Extras</td><td class="text-end">{{ total_extras | brl }}</td></tr>
-          {% endif %}
-          <tr style="border-top:1px solid rgba(255,255,255,.2);"><td><strong>Total Entradas</strong></td><td class="text-end"><strong>{{ total_entradas | brl }}</strong></td></tr>
-          <tr style="margin-top:.5rem;"><td>Despesas Fixas</td><td class="text-end">{{ total_fixas | brl }}</td></tr>
-          <tr><td>Despesas Variáveis</td><td class="text-end">{{ total_variaveis | brl }}</td></tr>
-          <tr style="border-top:1px solid rgba(255,255,255,.2);"><td><strong>Total Saídas</strong></td><td class="text-end"><strong>{{ total_saidas | brl }}</strong></td></tr>
-        </table>
-      </div>
-      <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex flex-column justify-content-center">
-        <!-- Saldo do mês (total_mes) -->
-        <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.2);">
-          <div style="font-size:.75rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;">TOTAL DO MÊS</div>
-          <div style="font-family:'DM Serif Display',serif;font-size:2rem;color:{{ '#7fff9e' if saldo_mes >= 0 else '#ff8888' }};">
-            {{ saldo_mes | brl }}
-          </div>
-          <div style="font-size:.8rem;color:rgba(255,255,255,.5);">Entradas − Saídas de {{ mes_nome }}</div>
-        </div>
-        <!-- Saldo em conta (acumulado) -->
-        <div>
-          <div style="font-size:.75rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;">SALDO EM CONTA</div>
-          <table style="color:rgba(255,255,255,.75);font-size:.85rem;width:100%;margin-bottom:.4rem;">
-            <tr><td>Saldo Anterior</td><td class="text-end">{{ saldo_anterior | brl }}</td></tr>
-            <tr><td>Total do Mês</td><td class="text-end">{{ saldo_mes | brl }}</td></tr>
-          </table>
-          <div style="font-family:'DM Serif Display',serif;font-size:2.5rem;color:{{ '#7fff9e' if saldo_conta >= 0 else '#ff8888' }};">
-            {{ saldo_conta | brl }}
-          </div>
-          <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-top:.2rem;">
-            Acumulado até {{ mes_nome }} {{ year }}
+  <div class="mt-5">
+    <div class="row g-4 justify-content-center">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background:#f8faf9;border-radius:20px;">
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <!-- Fluxo -->
+              <div class="col-md-6 mb-3 mb-md-0">
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-muted fw-600 text-nowrap">Total Entradas</span>
+                  <span class="text-success fw-700 text-nowrap ps-2">{{ total_entradas | brl }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="text-muted fw-600 text-nowrap">Total Saídas</span>
+                  <span class="text-danger fw-700 text-nowrap ps-2">{{ total_saidas | brl }}</span>
+                </div>
+                <div class="pt-3 border-top d-flex justify-content-between align-items-center gap-3">
+                  <span class="fw-800 text-nowrap" style="color:var(--green-dark);">RESULTADO DO MÊS</span>
+                  <span class="fw-800 fs-3 text-nowrap"
+                    style="color:{{ 'var(--green-bright)' if saldo_mes >= 0 else 'var(--red-soft)' }};">
+                    {{ saldo_mes | brl }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Separador -->
+              <div class="col-md-1 d-none d-md-block text-center text-muted opacity-25">
+                <div style="width:1px;height:80px;background:currentColor;margin:0 auto;"></div>
+              </div>
+
+              <!-- Saldo Final -->
+              <div class="col-md-5 overflow-hidden d-flex flex-column align-items-md-end">
+                <table style="text-align: right; white-space:nowrap; margin-bottom: 0;">
+                  <tr style="font-size:0.85rem; font-weight:600;">
+                    <td class="text-muted pe-3 pb-1"><span class="fw-normal opacity-75">Saldo Anterior</span></td>
+                    <td class="text-muted pb-1">{{ saldo_anterior | brl }}</td>
+                  </tr>
+                  <tr style="font-size:0.85rem; font-weight:600;">
+                    <td class="text-muted pe-3 pb-1">
+                      <span class="text-black-50 me-1">{{ '+' if saldo_mes >= 0 else '-' }}</span>
+                      <span class="fw-normal opacity-75">Resultado do Mês</span>
+                    </td>
+                    <td class="pb-1" style="color:{{ 'var(--green-dark)' if saldo_mes >= 0 else 'var(--red-soft)' }}">
+                      {{ (saldo_mes if saldo_mes >= 0 else (saldo_mes * -1)) | brl }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">
+                      <div style="border-top:1px solid rgba(0,0,0,0.1); margin:4px 0 6px 0;"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="pe-3 align-middle">
+                      <h6 class="text-uppercase fw-700 mb-0 text-nowrap"
+                        style="letter-spacing:0.1em;color:var(--grey-600);font-size:0.75rem;">
+                        Saldo em Conta
+                      </h6>
+                    </td>
+                    <td class="align-middle">
+                      <div class="d-flex justify-content-end align-items-center gap-2">
+                        <div
+                          style="font-family:'DM Serif Display',serif;font-size:3.2rem;color:var(--gold);line-height:1;">
+                          {{ saldo_conta | brl }}
+                        </div>
+                        <i class="bi bi-bank fs-2 opacity-25 d-none d-sm-inline-block"></i>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <p class="mb-0 mt-2 text-muted text-nowrap text-end" style="font-size:0.8rem;">Acumulado até {{ mes_nome
+                  }} {{ year }}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -213,98 +288,13 @@
 </div>
 {% endblock %}
 
-{% block extra_head %}
-<!-- html2canvas e jsPDF para exportação client-side -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-{% endblock %}
-
 {% block extra_scripts %}
+
 <script>
-async function exportarPDF() {
-  const btn = document.getElementById('exportPdfBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Gerando PDF...';
-
-  // Elementos a esconder durante a captura
-  const sidebar    = document.querySelector('.sidebar');
-  const footerEl   = document.querySelector('footer');
-  const noPrint    = document.querySelectorAll('.no-print, .period-controls');
-  const appLayout  = document.querySelector('.app-layout');
-  const mainCont   = document.querySelector('.main-content');
-
-  // Salvar estilos originais
-  const origSidebar  = sidebar   ? sidebar.style.cssText   : '';
-  const origFooter   = footerEl  ? footerEl.style.cssText  : '';
-  const origLayout   = appLayout ? appLayout.style.cssText : '';
-  const origMain     = mainCont  ? mainCont.style.cssText  : '';
-
-  // Esconder nav e sidebar, expandir conteúdo
-  if (sidebar)   { sidebar.style.display   = 'none'; }
-  if (footerEl)  { footerEl.style.display  = 'none'; }
-  noPrint.forEach(el => el.style.visibility = 'hidden');
-  if (appLayout) { appLayout.style.cssText = 'display:block;width:100%;'; }
-  if (mainCont)  { mainCont.style.cssText  = 'width:100%;max-width:100%;'; }
-
-  // Pequena pausa para o DOM re-renderizar
-  await new Promise(r => setTimeout(r, 350));
-
-  try {
-    const captured = document.querySelector('.main-content') || document.body;
-
-    const canvas = await html2canvas(captured, {
-      scale: 1.8,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#f5f6fa',
-      windowWidth: 1280,
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.93);
-    const { jsPDF } = window.jspdf;
-
-    const pdf      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pageW    = pdf.internal.pageSize.getWidth();
-    const pageH    = pdf.internal.pageSize.getHeight();
-    const imgH     = (canvas.height * pageW) / canvas.width;
-
-    // Adiciona conteúdo em múltiplas páginas se necessário
-    let remaining = imgH;
-    let yOffset   = 0;
-    pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
-    remaining -= pageH;
-
-    while (remaining > 0) {
-      yOffset -= pageH;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, yOffset, pageW, imgH);
-      remaining -= pageH;
-    }
-
-    pdf.save('relatorio-{{ mes_str }}.pdf');
-
-  } catch (err) {
-    alert('Não foi possível gerar o PDF.\nUse o botão Imprimir e escolha \"Salvar como PDF\".');
-    console.error(err);
-  } finally {
-    // Restaurar tudo
-    if (sidebar)   sidebar.style.cssText   = origSidebar;
-    if (footerEl)  footerEl.style.cssText  = origFooter;
-    noPrint.forEach(el => el.style.visibility = '');
-    if (appLayout) appLayout.style.cssText = origLayout;
-    if (mainCont)  mainCont.style.cssText  = origMain;
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-file-pdf me-1"></i>Exportar PDF';
+  function adminNavigate() {
+    const m = document.getElementById('monthSel').value;
+    const y = document.getElementById('yearSel').value;
+    window.location.href = `/admin/relatorio-mensal?year=${y}&month=${m}`;
   }
-}
-</script>
-
-<script>
-function adminNavigate() {
-  const m = document.getElementById('monthSel').value;
-  const y = document.getElementById('yearSel').value;
-  window.location.href = `/admin/relatorio-mensal?year=${y}&month=${m}`;
-}
 </script>
 {% endblock %}

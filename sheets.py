@@ -32,7 +32,7 @@ TAB_FIXAS     = 'Despesas_Fixas'
 TAB_VARIAVEIS = 'Despesas_Variaveis'
 
 HEADERS = {
-    TAB_ENTRADAS:   ['Mes', 'Data', 'Dizimos', 'Ofertas', 'descricao', 'tipo'],
+    TAB_ENTRADAS:   ['Mes', 'Data', 'Dizimos', 'Ofertas', 'Extra', 'descricao', 'tipo'],
     TAB_FIXAS:      ['Mes', 'Descricao', 'Valor'],
     TAB_VARIAVEIS:  ['Mes', 'Data', 'Descricao', 'Valor'],
 }
@@ -146,9 +146,8 @@ class SheetsDB:
 
     def delete_entrada(self, row_id):
         ws = self._get_ws(TAB_ENTRADAS)
-
-        ws.update(f'A{row_id}:G{row_id}', [['', '', '0', '0', '0', '', 'deleted']])
-
+        # Limpa as colunas e marca como deletado na coluna H (8ª coluna)
+        ws.update(f'A{row_id}:H{row_id}', [['', '', '0', '0', '0', '', '', 'deleted']])
         self._invalidate(TAB_ENTRADAS)
 
     def get_entradas(self, mes_str):
@@ -156,6 +155,7 @@ class SheetsDB:
         for r in rows:
             r['dizimos'] = self._flt(r.get('dizimos'))
             r['ofertas']  = self._flt(r.get('ofertas'))
+            r['extra']   = self._flt(r.get('extra'))
             r['descricao'] = r.get('descricao', '')
             r['tipo'] = r.get('tipo', 'normal')
         return rows
@@ -165,6 +165,7 @@ class SheetsDB:
         for r in rows:
             r['dizimos'] = self._flt(r.get('dizimos'))
             r['ofertas'] = self._flt(r.get('ofertas'))
+            r['extra']   = self._flt(r.get('extra'))
             r['descricao'] = r.get('descricao', '')
             r['tipo'] = r.get('tipo', 'normal')
         return rows
@@ -192,18 +193,19 @@ class SheetsDB:
             data = normalize_date(row.get('data'))
             diz  = row.get('dizimos', 0)
             ofe  = row.get('ofertas', 0)
+            ext  = row.get('extra', 0)
             desc = row.get('descricao', '')
             tipo = row.get('tipo', 'domingo')
 
-            values = [mes, data, str(diz), str(ofe), desc, tipo]
+            values = [mes, data, str(diz), str(ofe), str(ext), desc, tipo]
 
             row_id = row.get('row_id')
             if row_id:
                 rid = int(row_id)
-                ws.update(f'A{rid}:F{rid}', [values])
+                ws.update(f'A{rid}:G{rid}', [values])
                 changed = True
                 result_rows.append({**row, 'row_id': str(rid)})
-            elif diz or ofe or desc:
+            elif diz or ofe or ext or desc:
                 ws.append_row(values)
                 changed = True
                 all_data = ws.get_all_values()
